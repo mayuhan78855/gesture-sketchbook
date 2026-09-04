@@ -32,16 +32,18 @@ const browser = await chromium.launch({
 
 const page = await browser.newPage({ viewport: { width: 900, height: 572 } });
 await page.goto(`${BASE}/?demo=1`);
-await page.waitForFunction(() => window.__app && window.__app.particles() > 80, { timeout: 20000 });
+await page.waitForFunction(() => window.__app && window.__app.space && window.__app.space.ready, { timeout: 30000 });
+// 与演示时间轴对齐（Three.js 加载耗会使时间轴错开，这里等到一圈开头再开拍）
+await page.waitForFunction(() => window.__app.demoT() >= 0.1 && window.__app.demoT() <= 0.4, { timeout: 40000 });
+const t0 = Date.now() - (await page.evaluate(() => window.__app.demoT())) * 1000;
 
 console.log("开始录制…");
 const frames = []; // {buf, t}
-const t0 = Date.now();
 const shotAt = [
-  { t: 2200, name: "demo-draw-star.png" },      // 画五角星（粒子流）
-  { t: 6300, name: "demo-heart-construction.png" }, // 构造线 + 红心粒子流
-  { t: 13400, name: "demo-flower-bloom.png" },  // 捏合聚合的花朵全盛
-  { t: 15900, name: "demo-after-clear.png" },   // 松开消散后
+  { t: 2600, name: "demo-space-ring.png" },     // 星环 + 手掌视角跟随
+  { t: 6800, name: "demo-space-orbit.png" },    // 环绕视角
+  { t: 12600, name: "demo-space-sphere.png" },  // 捏合聚合成星球
+  { t: 15900, name: "demo-after-clear.png" },   // 超新星/还原后
 ];
 
 while (Date.now() - t0 < DURATION_MS) {

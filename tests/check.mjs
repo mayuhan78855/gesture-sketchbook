@@ -35,11 +35,11 @@ const track = (page) => page.on("console", (m) => {
 
 try {
   // ---- 1. 纯画布预览模式：页面可加载、无脚本报错 ----
-  console.log("\n[1] 画布预览模式 (?paper=1)");
+  console.log("\n[1] 画布预览模式 (?mode=particles&paper=1)");
   {
     const page = await browser.newPage({ viewport: { width: 1100, height: 700 } });
     track(page);
-    await page.goto(`${BASE}/?paper=1`);
+    await page.goto(`${BASE}/?mode=particles&paper=1`);
     await page.waitForTimeout(1500);
     ok("页面加载无报错", errors.length === 0, errors.slice(0, 2).join(" | "));
     const hintVisible = await page.locator("#hint").isVisible();
@@ -52,12 +52,12 @@ try {
     await page.close();
   }
 
-  // ---- 2. 粒子模式（默认）：手势驱动粒子效果 ----
-  console.log("\n[2] 粒子模式 (?demo=1)");
+  // ---- 2. 粒子模式：手势驱动粒子效果 ----
+  console.log("\n[2] 粒子模式 (?mode=particles&demo=1)");
   {
     const page = await browser.newPage({ viewport: { width: 1100, height: 700 } });
     track(page);
-    await page.goto(`${BASE}/?demo=1`);
+    await page.goto(`${BASE}/?mode=particles&demo=1`);
     await page.waitForFunction(() => window.__app && window.__app.particles() > 80, { timeout: 15000 });
     ok("粒子闭环：指尖粒子流持续产生", true);
     await page.waitForFunction(() => window.__app.lastGesture === "Closed_Fist", { timeout: 12000 });
@@ -93,6 +93,28 @@ try {
     await page.close();
   }
 
+  // ---- 2c. 3D 星环模式（默认）：Three.js 粒子云 + 手势变形 ----
+  console.log("\n[2c] 3D 星环模式 (?demo=1)");
+  {
+    const page = await browser.newPage({ viewport: { width: 900, height: 572 } });
+    track(page);
+    await page.goto(`${BASE}/?demo=1`);
+    await page.waitForFunction(() => window.__app && window.__app.space && window.__app.space.ready && window.__app.space.count > 10000, { timeout: 30000 });
+    ok("3D 星环：粒子云就位", true);
+    await page.waitForFunction(() => window.__app.lastGesture === "Thumb_Index", { timeout: 20000 });
+    await page.waitForTimeout(2000);
+    const morph = await page.evaluate(() => window.__app.space.morph);
+    ok("捏合聚合成星球", morph === "sphere", morph);
+    await page.screenshot({ path: path.join(root, "assets/screenshots/demo-space-sphere.png") });
+    await page.waitForFunction(() => window.__app.lastGesture === "None", { timeout: 15000 });
+    await page.waitForTimeout(1200);
+    const morph2 = await page.evaluate(() => window.__app.space.morph);
+    ok("松开恢复星环", morph2 === "ring", morph2);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    ok("桌面无横向溢出", overflow <= 0, `overflow=${overflow}px`);
+    await page.close();
+  }
+
   // ---- 3. 摄像头异常路径：无摄像头/拒绝权限 -> 友好错误提示，不崩溃 ----
   console.log("\n[3] 摄像头异常路径");
   {
@@ -123,7 +145,7 @@ try {
   {
     const page = await browser.newPage({ viewport: { width: 400, height: 800 } });
     track(page);
-    await page.goto(`${BASE}/?paper=1`);
+    await page.goto(`${BASE}/?mode=particles&paper=1`);
     await page.waitForTimeout(1200);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     ok("窄屏无横向溢出", overflow <= 0, `overflow=${overflow}px`);

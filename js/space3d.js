@@ -50,7 +50,7 @@ export class Space3D {
     const pos = new Float32Array(N * 3);
     const col = new Float32Array(N * 3);
 
-    const cIn = new THREE.Color("#ffd9a0"), cMid = new THREE.Color("#eef3ff"), cOut = new THREE.Color("#8fd8ff");
+    const cIn = new THREE.Color("#ffb85c"), cMid = new THREE.Color("#cfdcff"), cOut = new THREE.Color("#7cd4ff");
     const fib = 2.399963;
     for (let i = 0; i < N; i++) {
       this.a[i] = Math.random() * Math.PI * 2;
@@ -76,7 +76,7 @@ export class Space3D {
     this.pos = pos;
     this.geo = geo;
     this.points = new THREE.Points(geo, new THREE.PointsMaterial({
-      size: 0.032, vertexColors: true, transparent: true, opacity: 0.95,
+      size: 0.042, vertexColors: true, transparent: true, opacity: 0.88,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
     }));
     this.scene.add(this.points);
@@ -181,8 +181,8 @@ export class Space3D {
       Math.cos(this.azim) * Math.sin(this.polar) * R
     );
     this.camera.lookAt(0, 0, 0);
-    this.points.rotation.x = Math.sin(this._time * 0.3) * 0.1;
-    this.points.rotation.z = 0.16;
+    this.points.rotation.x = 0.42 + Math.sin(this._time * 0.3) * 0.08; // 土星式倾角
+    this.points.rotation.z = 0.24;
     // 捏合成星球时 core 稍微发亮
     const coreS = this.morph === "sphere" ? 1.12 : 1;
     this.core.scale.setScalar(coreS);

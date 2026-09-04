@@ -458,6 +458,7 @@ window.__app = {
   get space() { return space3d; },
   strokes: () => pad.strokes.length,
   particles: () => (renderMode === "space3d" && space3d ? space3d.count : ps.count),
+  demoT: () => (demo ? demo.t : -1),
   latency: () => (engine ? engine.latencyMs : 0),
   pad,
   ps,

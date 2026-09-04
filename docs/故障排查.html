@@ -85,6 +85,7 @@
     <tr><td>捏合撤销总误触</td><td>调小 <code>pinchRatio</code>（如 <code>0.035</code>）</td></tr>
     <tr><td>粒子效果变卡</td><td>同屏粒子太多：<code>js/config.js</code> 里把 <code>particles.max</code> 调低（如 1200），或关闭其他占用显卡的标签页；也可以切到"笔迹模式"（更轻量）</td></tr>
     <tr><td>想要画笔而不是粒子</td><td>点侧栏"笔迹模式"按钮，或地址加 <code>?mode=ink</code>；想默认笔迹模式可以把书签指向带参数的地址</td></tr>
+    <tr><td>3D 星环黑屏/卡顿</td><td>需要 WebGL 与硬件加速：浏览器设置里开启硬件加速；粒子太多则把 <code>js/config.js</code> 里 <code>space.count</code> 调低（如 6000）；首次进入需联网加载 Three.js</td></tr>
   </table>
 
   <h2><span class="dot">●</span> 页面与网络问题</h2>
