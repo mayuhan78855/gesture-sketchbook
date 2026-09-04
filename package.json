@@ -1,0 +1,16 @@
+{
+  "name": "gesture-sketchbook",
+  "version": "1.0.0",
+  "private": true,
+  "description": "手势草稿本：用摄像头手势在纸上作画的 Web 应用（MediaPipe + Canvas）",
+  "scripts": {
+    "serve": "node scripts/serve.js",
+    "test": "node tests/check.mjs",
+    "capture": "node scripts/capture.mjs"
+  },
+  "devDependencies": {
+    "gifenc": "^1.0.3",
+    "playwright-core": "^1.49.0",
+    "pngjs": "^7.0.0"
+  }
+}

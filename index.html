@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>手势草稿本 · Gesture Sketchbook</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="logo">手势草稿本 <span class="logo-sub">Gesture Sketchbook</span></h1>
+    <div id="statusChip" class="chip" data-kind="idle">组件加载中…</div>
+  </header>
+
+  <main class="stage">
+    <section class="paper-wrap">
+      <canvas id="paper" width="900" height="560"></canvas>
+      <div id="hint" class="hint">把手伸到摄像头前<br>张开手掌，开始作画</div>
+      <div id="demoBadge" class="demo-badge hidden">演示模式 · 虚拟手</div>
+      <div id="toast" class="toast hidden"></div>
+    </section>
+
+    <aside class="side">
+      <div class="card view-card">
+        <div class="card-title">摄像头取景 <span class="muted">(仅本地处理)</span></div>
+        <div class="view-box">
+          <video id="cam" autoplay playsinline muted></video>
+        </div>
+        <div class="card-tail" id="camStatus">未开启</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">手势图例</div>
+        <ul class="legend">
+          <li><svg viewBox="0 0 24 24" class="glyph"><path d="M5 12 L5 7 M9 12 L9 5 M13 12 L13 5 M17 12 L17 7 M5 12 Q10 16 17 12 L17 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>张开手掌 · 绘制</li>
+          <li><svg viewBox="0 0 24 24" class="glyph"><path d="M6 9 Q7 6 12 6 Q17 6 18 9 L18 12 Q18 15 12 15 Q6 15 6 12 Z M7 10 L7 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>握拳 · 切换颜色</li>
+          <li><svg viewBox="0 0 24 24" class="glyph"><path d="M10 14 L10 5 M10 5 Q10 3.4 11.4 3.4 Q12.8 3.4 12.8 5 L12.8 14 Q12.8 15.5 11.4 15.5 Q10 15.5 10 14 M8 18 L14 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>食指上指 · 构造线</li>
+          <li><svg viewBox="0 0 24 24" class="glyph"><path d="M8 18 L8 8 M8 8 Q8 6.5 9.3 6.5 Q10.6 6.5 10.6 8 L10.6 16 M14 18 L14 6 M14 6 Q14 4.5 15.2 4.5 Q16.4 4.5 16.4 6 L16.4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>剪刀手 · 笔刷粗细</li>
+          <li><svg viewBox="0 0 24 24" class="glyph"><path d="M7 12 L7 6 M7 6 Q7 4.5 8.3 4.5 Q9.6 4.5 9.6 6 L9.6 12 M7 12 Q11 11 17 11.5 L17 14 Q17 16.5 13.5 16.5 L10 16.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>点赞 · 清空画布</li>
+          <li><svg viewBox="0 0 24 24" class="glyph"><path d="M6 10 L10 14 M10 14 Q11.5 15.5 12 15.5 M12 4 L15 7 M15 7 Q16.5 8.5 16.5 9 M16.5 9 L20 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>捏合 · 撤销一笔</li>
+        </ul>
+        <label class="check"><input type="checkbox" id="constrToggle"> 显示构造线</label>
+      </div>
+
+      <div class="card">
+        <div class="card-title">工具</div>
+        <div class="swatches" id="swatches"></div>
+        <div class="btn-row">
+          <button id="btnUndo" class="btn" type="button">撤销</button>
+          <button id="btnClear" class="btn" type="button">清空</button>
+          <button id="btnSave" class="btn" type="button">导出 PNG</button>
+        </div>
+        <div class="btn-row">
+          <button id="btnDemo" class="btn ghost" type="button">演示模式</button>
+          <button id="btnCam" class="btn ghost" type="button">开启摄像头</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    摄像头画面仅在本机浏览器内分析，不会上传到任何服务器 ·
+    <a href="https://github.com/mayuhan78855/gesture-sketchbook" target="_blank" rel="noopener">源码仓库</a>
+  </footer>
+
+  <div id="errorPanel" class="error-panel hidden"></div>
+</body>
+</html>
