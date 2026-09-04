@@ -135,6 +135,11 @@ export class DemoHand {
     const dt = (now - this._prev) / 1000;
     this._prev = now;
     this.t += dt;
+    // 时间轴走完一圈后从头循环（末尾的“点赞”会清空画布，循环不会堆积）
+    if (this.t >= SEGMENTS[SEGMENTS.length - 1].t1) {
+      this.t = 0;
+      this._lastG = null;
+    }
 
     const seg = SEGMENTS.find((s) => this.t >= s.t0 && this.t < s.t1) || SEGMENTS[SEGMENTS.length - 1];
 
