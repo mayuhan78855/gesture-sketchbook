@@ -6,7 +6,8 @@
   "scripts": {
     "serve": "node scripts/serve.js",
     "test": "node tests/check.mjs",
-    "capture": "node scripts/capture.mjs"
+    "capture": "node scripts/capture.mjs",
+    "verify-online": "node tests/verify-online.mjs"
   },
   "devDependencies": {
     "gifenc": "^1.0.3",
