@@ -28,10 +28,10 @@ ok("线上页面加载成功", true);
 await page.waitForSelector("#errorPanel:not(.hidden)", { timeout: 30000 });
 ok("摄像头异常时显示友好提示", true);
 
-// 一键切到演示模式，验证绘制闭环在线上环境正常
+// 一键切到演示模式，验证粒子闭环在线上环境正常
 await page.locator(".error-actions button", { hasText: "演示" }).click();
-await page.waitForFunction(() => window.__app && window.__app.strokes() > 0, { timeout: 20000 });
-ok("演示模式绘制闭环正常（笔画已产生）", true);
+await page.waitForFunction(() => window.__app && window.__app.particles() > 80, { timeout: 20000 });
+ok("演示模式粒子闭环正常（粒子已产生）", true);
 ok("无脚本运行错误", errors.length === 0);
 
 console.log(`\n===== 线上验证：${step} 项检查完成 =====`);
