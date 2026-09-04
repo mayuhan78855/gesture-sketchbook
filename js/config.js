@@ -45,6 +45,14 @@ export const CONFIG = {
     handDragStrength: 0.35,// 掌风强度：动作驱动的力度
   },
 
+  // ---------- 3D 星环（Three.js 模式）----------
+  space: {
+    count: 14000,        // 星环粒子数（低配电脑调低到 6000）
+    ringRadius: 2.3,     // 星环基准半径
+    thickness: 0.09,     // 星环厚度
+    baseSpin: 0.5,       // 基础自旋速度（手掌挥动可加成 3 倍）
+  },
+
   // MediaPipe 资源地址（首次打开需联网下载模型，之后浏览器会缓存）
   wasmCDN: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
   modelURL: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",

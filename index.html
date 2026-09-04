@@ -15,6 +15,7 @@
 
   <main class="stage">
     <section class="paper-wrap">
+      <canvas id="space" class="hidden"></canvas>
       <canvas id="paper" width="900" height="560"></canvas>
       <div id="hint" class="hint">AWAITING HAND INPUT<br><span class="cn">将手伸入取景区 · 张开手掌开始绘制</span></div>
       <div id="demoBadge" class="demo-badge hidden">演示模式 · 虚拟手</div>
@@ -43,6 +44,11 @@
         <div class="btn-row">
           <button id="btnModeParticles" class="btn" type="button">粒子模式</button>
           <button id="btnModeInk" class="btn ghost" type="button">笔迹模式</button>
+        </div>
+        <div class="btn-row">
+          <button id="btnModeSpace" class="btn" type="button">3D 星环</button>
+          <button id="btnModeParticles" class="btn ghost" type="button">粒子</button>
+          <button id="btnModeInk" class="btn ghost" type="button">笔迹</button>
         </div>
         <div class="btn-row">
           <button id="btnUndo" class="btn" type="button">撤销</button>

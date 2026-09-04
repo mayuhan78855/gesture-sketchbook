@@ -28,7 +28,8 @@ const legendEl = document.querySelector(".legend");
 const pad = new SketchPad(canvas);
 const ps = new ParticleSystem(canvas);
 
-let renderMode = new URLSearchParams(location.search).get("mode") === "ink" ? "ink" : "particles";
+const modeParam = new URLSearchParams(location.search).get("mode");
+let renderMode = modeParam === "ink" ? "ink" : modeParam === "particles" ? "particles" : "space3d"; // 默认 3D 星环
 let engine = null;
 let demo = null;
 let mode = "paper"; // 运行状态：paper | camera | demo
@@ -202,6 +203,53 @@ function drawHud(ctx, hand) {
   ctx.restore();
 }
 
+// ---------- 3D 星环模式 ----------
+let space3d = null;
+
+function spaceFrame(f) {
+  lastHand = computeHand(f);
+  lastGesture = f.gesture; // 进入/退出判定由 Space3D 内部用 _g 追踪
+}
+
+function spaceLoop() {
+  if (renderMode !== "space3d" || !space3d) return;
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - (loopT || now)) / 1000);
+  loopT = now;
+  space3d.update(dt, lastHand, lastGesture);
+  space3d.render();
+  // HUD 画在 2D 画布上（星环在底层 3D 画布）
+  pad.ctx.clearRect(0, 0, pad.w, pad.h);
+  if (lastHand) drawHud(pad.ctx, lastHand);
+  hint.classList.toggle("hidden", !!lastHand);
+  if (++frameTick % 30 === 0) {
+    camStatus.textContent = mode === "camera" ? `SATURN RING · ${space3d.count}` : `DEMO · ${space3d.count} STARS`;
+  }
+  _raf = requestAnimationFrame(spaceLoop);
+}
+
+async function enterSpace() {
+  $("#space").classList.remove("hidden");
+  if (!space3d) {
+    setStatus("正在加载 3D 引擎…", "loading");
+    try {
+      const { Space3D } = await import("./space3d.js");
+      space3d = new Space3D($("#space"));
+      await space3d.init();
+    } catch (e) {
+      $("#space").classList.add("hidden");
+      setStatus("3D 引擎加载失败", "err");
+      showToast("3D 引擎加载失败（Three.js 需联网），已切回粒子模式");
+      renderMode = "particles";
+      syncModeButtons(); buildLegend();
+      pad._resize(); ps._resize(); particleLoop();
+      return;
+    }
+  }
+  space3d._resize();
+  spaceLoop();
+}
+
 // ---------- 笔迹模式：每帧入口（原有逻辑） ----------
 function inkFrame(f) {
   pad.hand = f.landmarks ? { landmarks: f.landmarks, size: f.size, present: true } : { present: false };
@@ -227,6 +275,7 @@ function inkFrame(f) {
 // ---------- 统一帧入口 ----------
 function onFrame(f) {
   if (renderMode === "particles") particleFrame(f);
+  else if (renderMode === "space3d") spaceFrame(f);
   else inkFrame(f);
 }
 
@@ -273,14 +322,17 @@ function setRenderMode(m) {
   lastGesture = "None";
   prevPalm = null;
   const checkWrap = constrToggle.closest(".check");
-  if (checkWrap) checkWrap.classList.toggle("hidden", m === "particles");
+  if (checkWrap) checkWrap.classList.toggle("hidden", m !== "ink");
+  $("#space").classList.toggle("hidden", m !== "space3d");
   buildLegend();
   syncModeButtons();
-  if (m === "particles") particleLoop();
-  else { ps._resize(); pad._resize(); showToast(m === "ink" ? "笔迹模式" : "粒子模式"); }
+  if (m === "particles") { pad._resize(); ps._resize(); particleLoop(); showToast("粒子模式"); }
+  else if (m === "ink") { pad._resize(); pad.dirty = true; showToast("笔迹模式"); }
+  else if (m === "space3d") { enterSpace().then(() => showToast("3D 星环模式")); }
 }
 
 function syncModeButtons() {
+  $("#btnModeSpace").classList.toggle("ghost", renderMode !== "space3d");
   $("#btnModeParticles").classList.toggle("ghost", renderMode !== "particles");
   $("#btnModeInk").classList.toggle("ghost", renderMode !== "ink");
 }
@@ -348,11 +400,23 @@ function buildSwatches() {
 
 function buildLegend() {
   legendEl.innerHTML = "";
-  const items = renderMode === "particles"
-    ? Object.entries(EFFECTS).map(([g, e]) => ({ glyph: e.glyph, text: `${e.label} · ${e.hint}` }))
-    : Object.entries(GESTURE_INFO)
-        .filter(([g]) => g !== "None" && GLYPHS[g])
-        .map(([g, info]) => ({ glyph: GLYPHS[g], text: `${info.label} · ${info.hint}` }));
+  let items;
+  if (renderMode === "space3d") {
+    items = [
+      { glyph: GLYPHS.Open_Palm, text: "张开手掌 · 视角跟随，挥动加速旋转" },
+      { glyph: GLYPHS.Closed_Fist, text: "握拳 · 星环收缩加速" },
+      { glyph: GLYPHS.Pointing_Up, text: "食指上指 · 俯瞰视角" },
+      { glyph: GLYPHS.Victory, text: "剪刀手 · 星环分裂双环" },
+      { glyph: GLYPHS.Thumb_Up, text: "点赞 · 超新星重组" },
+      { glyph: GLYPHS.Thumb_Index, text: "捏合 · 聚合成星球" },
+    ];
+  } else if (renderMode === "particles") {
+    items = Object.entries(EFFECTS).map(([g, e]) => ({ glyph: e.glyph, text: `${e.label} · ${e.hint}` }));
+  } else {
+    items = Object.entries(GESTURE_INFO)
+      .filter(([g]) => g !== "None" && GLYPHS[g])
+      .map(([g, info]) => ({ glyph: GLYPHS[g], text: `${info.label} · ${info.hint}` }));
+  }
   for (const it of items) {
     const li = document.createElement("li");
     li.innerHTML = `<svg viewBox="0 0 24 24" class="glyph"><path d="${it.glyph}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>${it.text}</span>`;
@@ -365,6 +429,7 @@ $("#btnClear").addEventListener("click", () => { pad.clear(); ps.killAll(0); sho
 $("#btnSave").addEventListener("click", () => pad.exportPNG());
 $("#btnDemo").addEventListener("click", startDemo);
 $("#btnCam").addEventListener("click", startCamera);
+$("#btnModeSpace").addEventListener("click", () => setRenderMode("space3d"));
 $("#btnModeParticles").addEventListener("click", () => setRenderMode("particles"));
 $("#btnModeInk").addEventListener("click", () => setRenderMode("ink"));
 constrToggle.addEventListener("change", () => {
@@ -390,8 +455,9 @@ window.__app = {
   get renderMode() { return renderMode; },
   get mode() { return mode; },
   get lastGesture() { return lastGesture; },
+  get space() { return space3d; },
   strokes: () => pad.strokes.length,
-  particles: () => ps.count,
+  particles: () => (renderMode === "space3d" && space3d ? space3d.count : ps.count),
   latency: () => (engine ? engine.latencyMs : 0),
   pad,
   ps,
@@ -404,10 +470,12 @@ window.__app = {
 buildSwatches();
 buildLegend();
 syncModeButtons();
+const checkWrap0 = constrToggle.closest(".check");
+if (checkWrap0) checkWrap0.classList.toggle("hidden", renderMode !== "ink"); // 只有笔迹模式显示构造线开关
 if (renderMode === "particles") {
-  const checkWrap = constrToggle.closest(".check");
-  if (checkWrap) checkWrap.classList.add("hidden"); // 粒子模式 HUD 常开
   particleLoop();
+} else if (renderMode === "space3d") {
+  enterSpace();
 }
 
 const params = new URLSearchParams(location.search);
