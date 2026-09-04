@@ -197,7 +197,8 @@ function drawHud(ctx, hand) {
   const wrist = P(0), midTip = P(12);
   ctx.font = '11px Consolas, "Cascadia Code", monospace';
   ctx.fillStyle = "rgba(255, 180, 84, .9)";
-  ctx.fillText(`SIZE:${Math.round(hand.size * 100)}`, (wrist.x + midTip.x) / 2 + 10, (wrist.y + midTip.y) / 2 - 4);
+  // 读数标注放在手腕附近，避免压住花心等画面主体
+  ctx.fillText(`SIZE:${Math.round(hand.size * 100)}`, wrist.x + 12, wrist.y + 16);
   ctx.restore();
 }
 

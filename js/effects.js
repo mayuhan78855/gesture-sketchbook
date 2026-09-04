@@ -24,6 +24,17 @@
 
 import { CONFIG } from "./config.js";
 
+// 花瓣颜色：花芯金黄，越往外越从粉紫过渡到蓝紫；瓣尖更亮
+function petalColor(t) {
+  if (t < 0.16) return "#ffd27a";
+  const hue = 335 - (t - 0.16) * 140;
+  const light = 56 + t * 22;
+  return `hsl(${hue.toFixed(0)}, 95%, ${light.toFixed(0)}%)`;
+}
+
+// 花开绽放的会话状态（同一时间只有一朵花）
+let bloom = null;
+
 export const EFFECTS = {
   Open_Palm: {
     label: "绘制流",
@@ -124,19 +135,80 @@ export const EFFECTS = {
   },
 
   Thumb_Index: {
-    label: "引力奇点",
-    en: "WELL",
-    hint: "捏合产生引力点吸聚粒子",
+    label: "花开绽放",
+    en: "BLOOM",
+    hint: "捏合聚合成花，松开消散",
     glyph: "M6 10 L10 14 M10 14 Q11.5 15.5 12 15.5 M12 4 L15 7 M15 7 Q16.5 8.5 16.5 9 M16.5 9 L20 13",
     onEnter(hand, ps) {
-      ps.attractors.push({ x: hand.tip.x, y: hand.tip.y, r: 270, strength: 1400 });
+      bloom = { cx: hand.tip.x, cy: hand.tip.y, rot: Math.random() * Math.PI * 2, grow: 0, seeds: [] };
+      // 每瓣固定长度 => 剪影均匀；金芯实心盘 => 视觉锚点
+      const petalLen = [];
+      for (let k = 0; k < 6; k++) petalLen.push(0.94 + Math.random() * 0.16);
+      const N = 900;
+      for (let i = 0; i < N; i++) {
+        const core = i < 150;
+        const petal = Math.floor(Math.random() * 6);
+        let t, a, r, color, size;
+        if (core) {
+          // 金色花芯：实心盘，视觉中心
+          t = 0.03 + Math.random() * 0.09;
+          a = Math.random() * Math.PI * 2;
+          r = 3 + Math.random() * 26;
+          color = Math.random() < 0.3 ? "#fff3d6" : "#ffd27a";
+          size = 1.8 + Math.random() * 1.6;
+        } else {
+          // 泪滴形花瓣：瓣根窄、瓣中最宽、瓣尖收拢，瓣间留出明显间隙
+          t = 0.14 + Math.pow(Math.random(), 0.8) * 0.86;
+          const half = 0.05 + 0.26 * Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.06)), 0.8);
+          a = petal * (Math.PI / 3) + (Math.random() - 0.5) * 2 * half + (Math.random() - 0.5) * 0.015;
+          r = 30 + t * 150 * petalLen[petal] * (0.92 + Math.random() * 0.16);
+          color = petalColor(t);
+          size = 1.5 + Math.random() * 1.1;
+        }
+        const seed = { a, r, t };
+        bloom.seeds.push(seed);
+        ps.spawn({
+          x: hand.tip.x + (Math.random() - 0.5) * 36,
+          y: hand.tip.y + (Math.random() - 0.5) * 36,
+          vx: (Math.random() - 0.5) * 140, vy: (Math.random() - 0.5) * 140,
+          life: 6, size,
+          color, gravity: 0, drag: 0.9,
+          tx: hand.tip.x, ty: hand.tip.y, stiff: 13 + Math.random() * 9,
+          seed,
+        });
+      }
+      ps.burst(hand.tip.x, hand.tip.y, 120, { color: hand.color, speed: [50, 200], life: [0.8, 1.6] });
     },
     onFrame(hand, ps) {
-      const a = ps.attractors[0];
-      if (a) { a.x = hand.tip.x; a.y = hand.tip.y; }
+      if (!bloom) return;
+      // 花心跟随捏合点；花朵随时间绽放并缓慢旋转
+      bloom.cx += (hand.tip.x - bloom.cx) * 0.12;
+      bloom.cy += (hand.tip.y - bloom.cy) * 0.12;
+      bloom.grow = Math.min(1, bloom.grow + 0.011);
+      bloom.rot += 0.0018;
+      for (const p of ps.parts) {
+        if (!p.seed) continue;
+        const s = p.seed;
+        const grow = Math.min(1, (bloom.grow * 1.25 - 0.1) * (1.2 - s.t * 0.25)); // 由内向外开
+        const r = s.r * Math.max(0.12, grow);
+        p.tx = bloom.cx + Math.cos(s.a + bloom.rot) * r;
+        p.ty = bloom.cy + Math.sin(s.a + bloom.rot) * r * 0.94;
+        p.life = Math.max(p.life, p.maxLife * 0.7); // 捏着不放就一直活着
+      }
     },
     onExit(hand, ps) {
-      ps.attractors.length = 0;
+      // 消散：解除弹簧目标，向外轻抛，颜色渐隐
+      for (const p of ps.parts) {
+        if (!p.seed) continue;
+        p.tx = null; p.ty = null;
+        const dx = p.x - (bloom ? bloom.cx : p.x);
+        const dy = p.y - (bloom ? bloom.cy : p.y);
+        const d = Math.hypot(dx, dy) || 1;
+        p.vx += (dx / d) * (50 + Math.random() * 170);
+        p.vy += (dy / d) * (50 + Math.random() * 170) - 20;
+        p.life = Math.min(p.life, 1.0 + Math.random() * 1.0);
+      }
+      bloom = null;
     },
   },
 };

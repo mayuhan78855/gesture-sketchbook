@@ -6,14 +6,13 @@
 // ============================================================
 
 const SEGMENTS = [
-  { t0: 0.2,  t1: 3.6,  gesture: "Open_Palm",   path: "star",  at: { x: 0.52, y: 0.50 } },
-  { t0: 3.6,  t1: 4.4,  gesture: "Closed_Fist", at: { x: 0.55, y: 0.48 } },
-  { t0: 4.4,  t1: 5.2,  gesture: "Pointing_Up", at: { x: 0.52, y: 0.46 } },
-  { t0: 5.2,  t1: 8.4,  gesture: "Open_Palm",   path: "heart", at: { x: 0.50, y: 0.42 } },
-  { t0: 8.4,  t1: 9.2,  gesture: "Victory",     at: { x: 0.50, y: 0.48 } },
-  { t0: 9.2,  t1: 12.4, gesture: "Open_Palm",   path: "wave",  at: { x: 0.50, y: 0.52 } },
-  { t0: 12.4, t1: 13.2, gesture: "Thumb_Up",    at: { x: 0.55, y: 0.45 } },
-  { t0: 13.2, t1: 15.5, gesture: "None",        at: { x: 0.5,  y: 0.5 } },
+  { t0: 0.2,  t1: 3.4,  gesture: "Open_Palm",   path: "star",  at: { x: 0.52, y: 0.50 } },
+  { t0: 3.4,  t1: 4.2,  gesture: "Closed_Fist", at: { x: 0.55, y: 0.48 } },
+  { t0: 4.2,  t1: 5.0,  gesture: "Pointing_Up", at: { x: 0.52, y: 0.46 } },
+  { t0: 5.0,  t1: 8.2,  gesture: "Open_Palm",   path: "heart", at: { x: 0.50, y: 0.42 } },
+  { t0: 8.2,  t1: 9.0,  gesture: "Victory",     at: { x: 0.50, y: 0.48 } },
+  { t0: 9.0,  t1: 14.2, gesture: "Thumb_Index", at: { x: 0.50, y: 0.46 } },
+  { t0: 14.2, t1: 16.5, gesture: "None",        at: { x: 0.5,  y: 0.5 } },
 ];
 
 // 手部关键点模板（单位坐标，y 向下为正在画布上的方向）
@@ -30,6 +29,14 @@ const POSES = {
     0: [0, 0.60],
     1: [-0.20, 0.42], 2: [-0.18, 0.32], 3: [-0.10, 0.27], 4: [-0.02, 0.25],
     5: [0.16, 0.30], 6: [0.21, 0.26], 7: [0.23, 0.21], 8: [0.24, 0.17],
+    9: [0.00, 0.28], 10: [0.02, 0.24], 11: [0.02, 0.19], 12: [0.02, 0.15],
+    13: [-0.16, 0.30], 14: [-0.19, 0.26], 15: [-0.20, 0.21], 16: [-0.21, 0.17],
+    17: [-0.29, 0.34], 18: [-0.33, 0.32], 19: [-0.35, 0.30], 20: [-0.36, 0.29],
+  },
+  pinch: {
+    0: [0, 0.60],
+    1: [-0.20, 0.42], 2: [-0.24, 0.32], 3: [-0.16, 0.18], 4: [0.06, -0.04],
+    5: [0.16, 0.28], 6: [0.20, 0.06], 7: [0.22, -0.10], 8: [0.23, -0.26],
     9: [0.00, 0.28], 10: [0.02, 0.24], 11: [0.02, 0.19], 12: [0.02, 0.15],
     13: [-0.16, 0.30], 14: [-0.19, 0.26], 15: [-0.20, 0.21], 16: [-0.21, 0.17],
     17: [-0.29, 0.34], 18: [-0.33, 0.32], 19: [-0.35, 0.30], 20: [-0.36, 0.29],
@@ -91,7 +98,7 @@ function pathPoint(kind, t, seg) {
   return { x: seg.at.x, y: seg.at.y };
 }
 
-const POSE_NAME = { Open_Palm: "open", Closed_Fist: "fist", Pointing_Up: "point", Victory: "victory", Thumb_Up: "thumb", None: "open" };
+const POSE_NAME = { Open_Palm: "open", Closed_Fist: "fist", Pointing_Up: "point", Victory: "victory", Thumb_Up: "thumb", Thumb_Index: "pinch", None: "open" };
 
 // 生成 21 个关键点：模板 + 缩放 + 位置 + 轻微呼吸抖动
 function buildHand(x, y, gesture, t) {

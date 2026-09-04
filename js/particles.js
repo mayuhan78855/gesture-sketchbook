@@ -50,6 +50,9 @@ export class ParticleSystem {
       size: o.size || 2,
       gravity: o.gravity ?? CONFIG.particles.gravity,
       drag: o.drag ?? 0.94, // 每帧速度保留比例（帧率归一到 60fps）
+      tx: o.tx ?? null, ty: o.ty ?? null, // 弹簧目标点（聚合成形用，如花开绽放）
+      stiff: o.stiff || 0,                // 弹簧刚度：越大聚合越快
+      seed: o.seed || null,               // 效果自定义数据（如花瓣参数）
     });
   }
 
@@ -121,6 +124,12 @@ export class ParticleSystem {
         }
       }
 
+      // 弹簧追踪：粒子飞向目标点（聚合成形：花开绽放等）
+      if (p.tx != null) {
+        p.vx += (p.tx - p.x) * p.stiff * dt;
+        p.vy += (p.ty - p.y) * p.stiff * dt;
+      }
+
       // 积分
       p.vy += p.gravity * dt;
       const keep = Math.pow(p.drag, dt * 60);
@@ -132,7 +141,9 @@ export class ParticleSystem {
   }
 
   /**
-   * 渲染：拖影层淡出+叠加粒子 -> 主画布清屏合成 -> HUD 叠加（不残留重影）
+   * 渲染：拖影层淡出+叠加粒子 -> 主画布合成 -> 聚合粒子实色绘制 -> HUD
+   * 聚合粒子（带 seed）密度高，若进加色拖影层会过曝成白，因此：
+   *   主层用正常混合画实色（花形清晰），拖影层只加一点低强度辉光。
    * @param {(ctx: CanvasRenderingContext2D) => void} [hud] 手部 HUD 绘制回调
    */
   render(hud) {
@@ -142,13 +153,25 @@ export class ParticleSystem {
     tctx.fillRect(0, 0, this.w, this.h);
 
     tctx.globalCompositeOperation = "lighter";
+    const seeded = [];
     for (const p of this.parts) {
       const t = p.life / p.maxLife;
-      tctx.globalAlpha = Math.min(1, t * 1.6);
-      tctx.fillStyle = p.color;
-      tctx.beginPath();
-      tctx.arc(p.x, p.y, Math.max(0.4, p.size * (0.5 + t * 0.5)), 0, Math.PI * 2);
-      tctx.fill();
+      const a = Math.min(1, t * 1.6);
+      if (p.seed) {
+        seeded.push([p, a]);
+        // 低强度辉光进拖影层，避免密集粒子互相加成过曝
+        tctx.globalAlpha = a * 0.08;
+        tctx.fillStyle = p.color;
+        tctx.beginPath();
+        tctx.arc(p.x, p.y, p.size * 1.8, 0, Math.PI * 2);
+        tctx.fill();
+      } else {
+        tctx.globalAlpha = a;
+        tctx.fillStyle = p.color;
+        tctx.beginPath();
+        tctx.arc(p.x, p.y, Math.max(0.4, p.size * (0.5 + t * 0.5)), 0, Math.PI * 2);
+        tctx.fill();
+      }
     }
     tctx.globalAlpha = 1;
     tctx.globalCompositeOperation = "source-over";
@@ -156,6 +179,17 @@ export class ParticleSystem {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.w, this.h);
     ctx.drawImage(this.trail, 0, 0, this.w, this.h);
+
+    // 聚合粒子：主画布实色，花形清晰可辨
+    ctx.globalCompositeOperation = "source-over";
+    for (const [p, a] of seeded) {
+      ctx.globalAlpha = Math.min(1, a * 0.95);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.6, p.size * 0.95), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
 
     if (hud) hud(ctx);
   }

@@ -62,10 +62,14 @@ try {
     ok("粒子闭环：指尖粒子流持续产生", true);
     await page.waitForFunction(() => window.__app.lastGesture === "Closed_Fist", { timeout: 12000 });
     ok("握拳触发能量爆发", true);
-    await page.waitForFunction(() => window.__app.lastGesture === "Thumb_Up", { timeout: 20000 });
-    await page.waitForTimeout(2600);
-    const c = await page.evaluate(() => window.__app.particles());
-    ok("点赞清空：粒子迅速消散", c < 60, `剩余 ${c}`);
+    await page.waitForFunction(() => window.__app.lastGesture === "Thumb_Index", { timeout: 20000 });
+    await page.waitForTimeout(3200);
+    const c1 = await page.evaluate(() => window.__app.particles());
+    ok("捏合聚合：大量粒子聚成花", c1 > 700, `${c1} 颗`);
+    await page.waitForFunction(() => window.__app.lastGesture === "None", { timeout: 15000 });
+    await page.waitForTimeout(3000);
+    const c2 = await page.evaluate(() => window.__app.particles());
+    ok("松开消散：粒子快速减少", c2 < c1 * 0.35, `${c1} -> ${c2}`);
     await page.close();
   }
 

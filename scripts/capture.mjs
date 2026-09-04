@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 8124;
 const BASE = `http://localhost:${PORT}`;
-const DURATION_MS = 15500;   // 演示时间轴 15.5s
+const DURATION_MS = 16500;   // 演示时间轴 16.5s（含花开全盛与消散）
 const FRAME_MS = 125;        // 目标帧间隔（截图耗时可能更长，按实际时间戳补偿）
 const OUT_W = 792, OUT_H = 503; // 输出 GIF 尺寸（源视口 900x572）
 
@@ -40,8 +40,8 @@ const t0 = Date.now();
 const shotAt = [
   { t: 2200, name: "demo-draw-star.png" },      // 画五角星（粒子流）
   { t: 6300, name: "demo-heart-construction.png" }, // 构造线 + 红心粒子流
-  { t: 11000, name: "demo-wave-bold.png" },     // 粗笔波浪线
-  { t: 13600, name: "demo-after-clear.png" },   // 清空后
+  { t: 13400, name: "demo-flower-bloom.png" },  // 捏合聚合的花朵全盛
+  { t: 15900, name: "demo-after-clear.png" },   // 松开消散后
 ];
 
 while (Date.now() - t0 < DURATION_MS) {
