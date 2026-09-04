@@ -4,19 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>手势草稿本 · Gesture Sketchbook</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12 L5 7 M9 12 L9 5 M13 12 L13 5 M17 12 L17 7 M5 12 Q10 16 17 12 L17 10' fill='none' stroke='%232b2a26' stroke-width='1.6' stroke-linecap='round'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12 L5 7 M9 12 L9 5 M13 12 L13 5 M17 12 L17 7 M5 12 Q10 16 17 12 L17 10' fill='none' stroke='%232dd8ff' stroke-width='1.6' stroke-linecap='round'/></svg>">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <header class="topbar">
-    <h1 class="logo">手势草稿本 <span class="logo-sub">Gesture Sketchbook</span></h1>
+    <h1 class="logo"><b>GESTURE</b> SKETCHBOOK <span class="logo-sub">手势草稿本 · NEON HUD</span></h1>
     <div id="statusChip" class="chip" data-kind="idle">组件加载中…</div>
   </header>
 
   <main class="stage">
     <section class="paper-wrap">
       <canvas id="paper" width="900" height="560"></canvas>
-      <div id="hint" class="hint">把手伸到摄像头前<br>张开手掌，开始作画</div>
+      <div id="hint" class="hint">AWAITING HAND INPUT<br><span class="cn">将手伸入取景区 · 张开手掌开始绘制</span></div>
       <div id="demoBadge" class="demo-badge hidden">演示模式 · 虚拟手</div>
       <div id="toast" class="toast hidden"></div>
     </section>
@@ -25,6 +25,7 @@
       <div class="card view-card">
         <div class="card-title">摄像头取景 <span class="muted">(仅本地处理)</span></div>
         <div class="view-box">
+          <div class="nosignal">NO SIGNAL</div>
           <video id="cam" autoplay playsinline muted></video>
         </div>
         <div class="card-tail" id="camStatus">未开启</div>

@@ -6,49 +6,58 @@
 <title>故障排查手册 · 手势草稿本</title>
 <style>
   :root {
-    --paper: #f7f2e6; --canvas: #fdfaf2; --ink: #2b2a26; --graphite: #55524b;
-    --faint: #8a837a; --line: #c4b795; --accent: #c0362c;
-    --hand: "Segoe Print", "Comic Sans MS", "Marker Felt", cursive;
-    --ui: "Segoe UI", system-ui, "Microsoft YaHei", sans-serif;
+    --bg: #070b12;
+    --panel: rgba(13, 20, 32, .88);
+    --panel-2: #0b111c;
+    --ink: #d7e6f5;
+    --graphite: #a7b8c9;
+    --faint: #6b7f94;
+    --line: rgba(45, 216, 255, .28);
+    --line-faint: rgba(45, 216, 255, .12);
+    --cyan: #2dd8ff;
+    --amber: #ffb454;
+    --danger: #ff5d6c;
     --mono: Consolas, "Cascadia Code", "Courier New", monospace;
+    --ui: "Segoe UI", system-ui, "Microsoft YaHei", sans-serif;
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; color: var(--ink); font-family: var(--ui); font-size: 15.5px; line-height: 1.75;
+    margin: 0; color: var(--ink); font-family: var(--ui); font-size: 15px; line-height: 1.8;
     background:
-      linear-gradient(rgba(43,42,38,.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(43,42,38,.03) 1px, transparent 1px),
-      var(--paper);
-    background-size: 28px 28px, 28px 28px, auto;
+      linear-gradient(rgba(45,216,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45,216,255,.04) 1px, transparent 1px),
+      radial-gradient(1100px 500px at 50% -10%, rgba(45,216,255,.08), transparent 60%),
+      var(--bg);
+    background-size: 32px 32px, 32px 32px, auto, auto;
   }
-  .sheet { max-width: 780px; margin: 0 auto; padding: 48px 24px 80px; }
-  .kicker { font-size: 12px; letter-spacing: .35em; color: var(--faint); text-transform: uppercase; margin-bottom: 14px; }
-  h1 { font-family: var(--hand); font-weight: 600; font-size: 38px; margin: 0 0 8px; transform: rotate(-.5deg); }
+  .sheet { max-width: 800px; margin: 0 auto; padding: 48px 24px 80px; }
+  .kicker { font-family: var(--mono); font-size: 11.5px; letter-spacing: .38em; color: var(--cyan); text-transform: uppercase; margin-bottom: 14px; }
+  h1 { font-family: var(--mono); font-weight: 700; font-size: 30px; margin: 0 0 10px; letter-spacing: .04em; }
   .lede { color: var(--graphite); margin: 0 0 24px; max-width: 62ch; }
-  h2 { font-family: var(--hand); font-size: 24px; margin: 44px 0 6px; }
-  h2 .dot { color: var(--accent); }
-  .rule { border: none; border-top: 1px solid var(--line); margin: 10px 0 20px; }
+  h2 { font-family: var(--mono); font-size: 17px; margin: 44px 0 4px; letter-spacing: .12em; color: #fff; }
+  h2 .dot { color: var(--cyan); }
+  .rule { border: none; border-top: 1px solid var(--line-faint); margin: 10px 0 20px; }
   p { margin: 0 0 12px; }
-  code { font-family: var(--mono); font-size: .9em; background: rgba(196,183,149,.22); padding: 1px 5px; border-radius: 2px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13.8px; margin: 0 0 10px; }
-  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
-  th { font-weight: 600; background: rgba(196,183,149,.15); }
-  .note { border: 2px dashed var(--line); background: var(--canvas); padding: 12px 18px; margin: 20px 0; font-size: 14.5px; color: var(--graphite); transform: rotate(-.3deg); }
-  .note b { font-family: var(--hand); color: var(--ink); }
+  code { font-family: var(--mono); font-size: .9em; background: rgba(45,216,255,.10); padding: 1px 5px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 0 0 10px; }
+  th, td { border: 1px solid var(--line-faint); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { font-weight: 600; color: var(--cyan); background: rgba(45,216,255,.06); font-family: var(--mono); letter-spacing: .06em; font-size: 12px; }
+  .note { border: 1px dashed var(--line); background: var(--panel); padding: 12px 18px; margin: 20px 0; font-size: 14px; color: var(--graphite); }
+  .note b { font-family: var(--mono); color: var(--amber); }
   ul.check { list-style: none; padding: 0; margin: 0 0 16px; }
-  ul.check li { padding: 5px 0 5px 30px; position: relative; border-bottom: 1px dashed rgba(196,183,149,.6); }
+  ul.check li { padding: 6px 0 6px 32px; position: relative; border-bottom: 1px dashed var(--line-faint); }
   ul.check li::before {
-    content: ""; position: absolute; left: 2px; top: 9px; width: 14px; height: 14px;
-    border: 1.8px solid var(--ink); border-radius: 4px 6px 5px 7px / 6px 4px 7px 5px;
+    content: ""; position: absolute; left: 4px; top: 11px; width: 12px; height: 12px;
+    border: 1.5px solid var(--cyan);
   }
-  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--faint); }
-  footer a { color: var(--accent); }
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line-faint); font-family: var(--mono); font-size: 11.5px; color: var(--faint); letter-spacing: .05em; }
+  footer a { color: var(--cyan); }
 </style>
 </head>
 <body>
 <div class="sheet">
   <div class="kicker">Gesture Sketchbook · 排查手册</div>
-  <h1>故障排查<span style="color:var(--accent)">与</span>常见问题</h1>
+  <h1>故障排查<span style="color:var(--cyan)">与</span>常见问题</h1>
   <p class="lede">按"现象 → 原因 → 解决"组织。解决不了时：按 F12 打开浏览器控制台，把红色报错截图发给 AI 助手。</p>
 
   <div class="note"><b>万能求助模板</b>："我在跑 gesture-sketchbook 项目（本地 <code>node scripts/serve.js</code> 启动），报错如下：……请帮我定位。" 附上控制台截图。</div>
@@ -108,7 +117,7 @@
     <li>改参数后刷新了页面（Ctrl+F5）</li>
   </ul>
 
-  <footer>手势草稿本 Gesture Sketchbook · 排查手册 —— <a href="学习路线.html">返回学习路线</a></footer>
+  <footer>手势草稿本 Gesture Sketchbook · NEON HUD · 排查手册 —— <a href="学习路线.html">返回学习路线</a></footer>
 </div>
 </body>
 </html>

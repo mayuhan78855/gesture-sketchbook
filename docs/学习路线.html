@@ -6,138 +6,125 @@
 <title>vibecoding 手势交互学习路线 · 零基础陪跑手册</title>
 <style>
   :root {
-    --paper: #f7f2e6;
-    --canvas: #fdfaf2;
-    --ink: #2b2a26;
-    --graphite: #55524b;
-    --faint: #8a837a;
-    --line: #c4b795;
-    --accent: #c0362c;
-    --hand: "Segoe Print", "Comic Sans MS", "Marker Felt", cursive;
-    --ui: "Segoe UI", system-ui, "Microsoft YaHei", sans-serif;
+    --bg: #070b12;
+    --panel: rgba(13, 20, 32, .88);
+    --panel-2: #0b111c;
+    --ink: #d7e6f5;
+    --graphite: #a7b8c9;
+    --faint: #6b7f94;
+    --line: rgba(45, 216, 255, .28);
+    --line-faint: rgba(45, 216, 255, .12);
+    --cyan: #2dd8ff;
+    --amber: #ffb454;
     --mono: Consolas, "Cascadia Code", "Courier New", monospace;
+    --ui: "Segoe UI", system-ui, "Microsoft YaHei", sans-serif;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     color: var(--ink);
     font-family: var(--ui);
-    font-size: 16px;
-    line-height: 1.75;
+    font-size: 15.5px;
+    line-height: 1.8;
     background:
-      linear-gradient(rgba(43,42,38,.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(43,42,38,.03) 1px, transparent 1px),
-      var(--paper);
-    background-size: 28px 28px, 28px 28px, auto;
+      linear-gradient(rgba(45,216,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45,216,255,.04) 1px, transparent 1px),
+      radial-gradient(1100px 500px at 50% -10%, rgba(45,216,255,.08), transparent 60%),
+      var(--bg);
+    background-size: 32px 32px, 32px 32px, auto, auto;
   }
-  .sheet { max-width: 720px; margin: 0 auto; padding: 56px 24px 80px; }
+  .sheet { max-width: 760px; margin: 0 auto; padding: 56px 24px 80px; }
 
-  /* ---------- 头部 ---------- */
-  .kicker {
-    font-size: 12px; letter-spacing: .35em; color: var(--faint);
-    text-transform: uppercase; margin-bottom: 18px;
-  }
+  .kicker { font-family: var(--mono); font-size: 11.5px; letter-spacing: .38em; color: var(--cyan); text-transform: uppercase; margin-bottom: 18px; }
   h1 {
-    font-family: var(--hand); font-weight: 600; font-size: 44px;
-    line-height: 1.2; margin: 0 0 10px; letter-spacing: .01em;
-    transform: rotate(-.5deg);
+    font-family: var(--mono); font-weight: 700; font-size: 34px;
+    line-height: 1.25; margin: 0 0 12px; letter-spacing: .04em;
   }
-  h1 .accent { color: var(--accent); }
-  .lede { font-size: 18px; color: var(--graphite); margin: 0 0 26px; max-width: 60ch; }
+  h1 .accent { color: var(--cyan); }
+  .lede { font-size: 17px; color: var(--graphite); margin: 0 0 24px; max-width: 62ch; }
   .meta {
     display: flex; flex-wrap: wrap; gap: 8px 26px;
-    font-size: 13px; color: var(--faint);
+    font-family: var(--mono); font-size: 12px; color: var(--faint);
     border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-    padding: 10px 2px; margin-bottom: 40px;
+    padding: 11px 2px; margin-bottom: 40px;
   }
-  .meta b { color: var(--graphite); font-weight: 600; }
+  .meta b { color: var(--ink); font-weight: 600; }
 
-  /* ---------- 目录 ---------- */
-  nav.toc { margin: 0 0 52px; padding: 18px 22px; border: 2px dashed var(--line); background: var(--canvas); }
-  nav.toc .toc-title { font-family: var(--hand); font-size: 15px; margin-bottom: 8px; color: var(--graphite); }
-  nav.toc ol { margin: 0; padding-left: 22px; }
-  nav.toc li { margin: 4px 0; font-size: 14.5px; }
-  nav.toc a { color: var(--ink); text-decoration: none; border-bottom: 1px dashed var(--line); }
-  nav.toc a:hover { border-bottom-color: var(--accent); color: var(--accent); }
+  nav.toc { margin: 0 0 52px; padding: 18px 22px; border: 1px solid var(--line); background: var(--panel); position: relative; }
+  nav.toc::before { content: ""; position: absolute; left: -1px; top: -1px; width: 30px; height: 2px; background: var(--cyan); }
+  nav.toc .toc-title { font-family: var(--mono); font-size: 12px; letter-spacing: .2em; margin-bottom: 10px; color: var(--cyan); }
+  nav.toc ol { margin: 0; padding-left: 20px; }
+  nav.toc li { margin: 5px 0; font-size: 14px; }
+  nav.toc a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line-faint); }
+  nav.toc a:hover { color: var(--cyan); border-bottom-color: var(--cyan); }
 
-  /* ---------- 章节 ---------- */
   section { margin-bottom: 58px; }
-  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; }
   .sec-no {
-    font-family: var(--hand); font-size: 13px; color: var(--accent);
-    border: 1.6px solid var(--accent); border-radius: 50% 46% 52% 48% / 48% 52% 46% 52%;
-    width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
-    flex-shrink: 0; transform: rotate(-3deg);
+    font-family: var(--mono); font-size: 13px; color: var(--cyan);
+    border: 1px solid var(--cyan); padding: 3px 9px;
+    flex-shrink: 0;
   }
-  h2 { font-family: var(--hand); font-size: 27px; font-weight: 600; margin: 0; letter-spacing: .01em; }
-  .sec-rule { border: none; border-top: 1px solid var(--line); margin: 14px 0 22px; position: relative; }
-  .sec-rule::after {
-    content: ""; position: absolute; right: 0; top: -4px; width: 60px;
-    border-top: 1px dashed var(--line);
-  }
+  h2 { font-family: var(--mono); font-size: 22px; font-weight: 700; margin: 0; letter-spacing: .05em; }
+  .sec-rule { border: none; border-top: 1px solid var(--line-faint); margin: 14px 0 22px; }
   p { margin: 0 0 14px; }
-  strong { font-weight: 600; }
-  em.hand { font-family: var(--hand); font-style: normal; color: var(--accent); }
-  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(192,54,44,.35); }
+  strong { font-weight: 600; color: #fff; }
+  em.tech { font-family: var(--mono); font-style: normal; color: var(--cyan); }
+  a { color: var(--cyan); text-decoration: none; border-bottom: 1px solid rgba(45,216,255,.35); }
   a:hover { border-bottom-style: dashed; }
 
-  /* ---------- 代码 ---------- */
   pre {
-    font-family: var(--mono); font-size: 13.5px; line-height: 1.7;
-    background: var(--canvas); border: 1px solid var(--line);
-    border-radius: 2px; padding: 14px 16px; overflow-x: auto; margin: 0 0 14px;
+    font-family: var(--mono); font-size: 13px; line-height: 1.75;
+    background: var(--panel-2); border: 1px solid var(--line-faint);
+    border-left: 2px solid var(--cyan);
+    padding: 14px 16px; overflow-x: auto; margin: 0 0 14px; color: #c8dcf0;
   }
-  code { font-family: var(--mono); font-size: .92em; background: rgba(196,183,149,.22); padding: 1px 5px; border-radius: 2px; }
+  code { font-family: var(--mono); font-size: .9em; background: rgba(45,216,255,.10); padding: 1px 5px; }
   pre code { background: none; padding: 0; }
 
-  /* ---------- 表格 ---------- */
-  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 0 0 14px; }
-  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
-  th { font-weight: 600; background: rgba(196,183,149,.15); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 0 0 14px; }
+  th, td { border: 1px solid var(--line-faint); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { font-family: var(--mono); font-weight: 600; letter-spacing: .06em; color: var(--cyan); background: rgba(45,216,255,.06); }
   td code { white-space: nowrap; }
 
-  /* ---------- 批注便签 ---------- */
   .note {
-    border: 2px dashed var(--line); background: var(--canvas);
-    padding: 12px 18px; margin: 0 0 16px; font-size: 14.5px; color: var(--graphite);
-    transform: rotate(-.4deg);
+    border: 1px dashed var(--line); background: var(--panel);
+    padding: 12px 18px; margin: 0 0 16px; font-size: 14px; color: var(--graphite);
   }
-  .note b { font-family: var(--hand); color: var(--ink); }
+  .note b { font-family: var(--mono); color: var(--amber); }
 
-  /* ---------- 数据流图 ---------- */
   .flow { display: flex; align-items: stretch; gap: 0; margin: 6px 0 18px; flex-wrap: wrap; }
   .flow .node {
-    flex: 1 1 150px; border: 2px solid var(--ink); background: var(--canvas);
-    border-radius: 255px 12px 225px 12px / 12px 225px 12px 255px;
+    flex: 1 1 150px; border: 1px solid var(--line); background: var(--panel);
     padding: 10px 14px; text-align: center;
   }
-  .flow .node .t { font-family: var(--hand); font-size: 15.5px; }
-  .flow .node .d { font-size: 12px; color: var(--faint); margin-top: 2px; }
-  .flow .arrow { align-self: center; font-size: 20px; color: var(--faint); padding: 0 6px; font-family: var(--mono); }
+  .flow .node .t { font-family: var(--mono); font-size: 14px; color: var(--cyan); letter-spacing: .08em; }
+  .flow .node .d { font-size: 11.5px; color: var(--faint); margin-top: 3px; }
+  .flow .arrow { align-self: center; font-family: var(--mono); color: var(--cyan); padding: 0 8px; }
 
-  /* ---------- 步骤列表（毕业任务） ---------- */
   ol.steps { counter-reset: step; list-style: none; margin: 0 0 16px; padding: 0; }
-  ol.steps li { counter-increment: step; position: relative; padding: 0 0 18px 52px; }
+  ol.steps li { counter-increment: step; position: relative; padding: 0 0 18px 50px; }
   ol.steps li::before {
-    content: counter(step);
+    content: counter(step, decimal-leading-zero);
     position: absolute; left: 0; top: 0;
-    font-family: var(--hand); font-size: 14px; color: var(--accent);
-    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
-    border: 1.6px dashed var(--accent); border-radius: 48% 52% 50% 50% / 52% 46% 54% 48%;
+    font-family: var(--mono); font-size: 12px; color: var(--cyan);
+    width: 32px; height: 24px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); background: var(--panel-2);
   }
-  ol.steps li::after { content: ""; position: absolute; left: 14px; top: 32px; bottom: 2px; border-left: 1px dashed var(--line); }
+  ol.steps li::after { content: ""; position: absolute; left: 16px; top: 26px; bottom: 2px; border-left: 1px dashed var(--line-faint); }
   ol.steps li:last-child::after { display: none; }
 
-  /* ---------- 成品图 ---------- */
   figure { margin: 0 0 18px; }
-  figure img { width: 100%; border: 2px solid var(--ink); border-radius: 3px; display: block; }
-  figure figcaption { font-size: 12.5px; color: var(--faint); margin-top: 6px; font-family: var(--hand); }
+  figure img { width: 100%; border: 1px solid var(--line); display: block; background: var(--panel-2); }
+  figure figcaption { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin-top: 8px; letter-spacing: .08em; }
+  figure figcaption::before { content: "> "; color: var(--cyan); }
 
   footer {
-    margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line);
-    font-size: 12.5px; color: var(--faint); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line-faint);
+    font-family: var(--mono); font-size: 12px; color: var(--faint);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
   }
-  @media (max-width: 560px) { h1 { font-size: 34px; } .sheet { padding-top: 40px; } }
+  @media (max-width: 560px) { h1 { font-size: 27px; } .sheet { padding-top: 40px; } }
 </style>
 </head>
 <body>
@@ -156,7 +143,7 @@
   </header>
 
   <nav class="toc">
-    <div class="toc-title">路线图</div>
+    <div class="toc-title">// 路线图 ROADMAP</div>
     <ol>
       <li><a href="#s0">阶段 0 · 心态与地图 —— vibecoding 到底在循环什么</a></li>
       <li><a href="#s1">阶段 1 · 装工具 —— Node.js / VS Code / Git / GitHub</a></li>
@@ -170,11 +157,11 @@
 
   <figure>
     <img src="../assets/demo.gif" alt="手势草稿本演示动图：虚拟手画五角星、换色、开启构造线、画红心、清空画布">
-    <figcaption>你将做出的东西：手势草稿本 Gesture Sketchbook（14 秒演示）</figcaption>
+    <figcaption>你将做出的东西：手势草稿本 Gesture Sketchbook（NEON HUD 版，约 12 秒演示）</figcaption>
   </figure>
 
   <section id="s0">
-    <div class="sec-head"><span class="sec-no">0</span><h2>心态与地图</h2></div>
+    <div class="sec-head"><span class="sec-no">00</span><h2>心态与地图</h2></div>
     <hr class="sec-rule">
     <p>vibecoding 的核心不是"背语法"，而是一个循环：<strong>描述 → 生成 → 验证 → 修改</strong>。你负责描述想要什么、判断结果对不对；AI 负责写代码。这门课的全部内容，就是带你把这个循环完整跑通一遍。</p>
     <p>整个项目的数据流只有三段。记住这张图，后面所有代码都能对上号：</p>
@@ -189,7 +176,7 @@
   </section>
 
   <section id="s1">
-    <div class="sec-head"><span class="sec-no">1</span><h2>装工具</h2></div>
+    <div class="sec-head"><span class="sec-no">01</span><h2>装工具</h2></div>
     <hr class="sec-rule">
     <p>只需要 3 样东西，全部免费：</p>
     <table>
@@ -205,7 +192,7 @@
   </section>
 
   <section id="s2">
-    <div class="sec-head"><span class="sec-no">2</span><h2>把项目跑起来</h2></div>
+    <div class="sec-head"><span class="sec-no">02</span><h2>把项目跑起来</h2></div>
     <hr class="sec-rule">
     <pre><code>git clone https://github.com/mayuhan78855/gesture-sketchbook.git
 cd gesture-sketchbook
@@ -213,18 +200,18 @@ node scripts/serve.js</code></pre>
     <p>浏览器打开 <code>http://localhost:8000</code>：</p>
     <ol class="steps">
       <li>弹出摄像头授权 → 点<strong>"允许"</strong>。右上角状态灯变绿、显示"已就绪"。</li>
-      <li>手伸到镜头前 30–60cm，<em class="hand">张开手掌</em>——移动手，纸上出现铅笔笔迹。</li>
+      <li>手伸到镜头前 30–60cm，<em class="tech">张开手掌</em>——移动手，画布上出现霓虹笔迹。</li>
       <li>试试其他手势：握拳换颜色、食指上指开构造线、剪刀手换笔刷、点赞清空。</li>
       <li>没有摄像头？点右侧"演示模式"，一只虚拟手会自动表演全部交互。</li>
     </ol>
     <figure>
-      <img src="../assets/screenshots/demo-heart-construction.png" alt="构造线开启状态：红色爱心笔迹 + 手部骨架虚线">
-      <figcaption>你应该看到的效果：构造线模式下，手部骨架会以虚线画在纸上</figcaption>
+      <img src="../assets/screenshots/demo-heart-construction.png" alt="构造线开启状态：霓虹笔迹 + 手部追踪 HUD 虚线">
+      <figcaption>你应该看到的效果：构造线模式下，手部骨架会以 HUD 虚线画在画布上</figcaption>
     </figure>
   </section>
 
   <section id="s3">
-    <div class="sec-head"><span class="sec-no">3</span><h2>读懂代码：只需要看 4 个文件</h2></div>
+    <div class="sec-head"><span class="sec-no">03</span><h2>读懂代码：只需要看 4 个文件</h2></div>
     <hr class="sec-rule">
     <p>每个文件只干一件事——这是好项目的通例，也是你能快速上手的理由：</p>
     <table>
@@ -241,7 +228,7 @@ node scripts/serve.js</code></pre>
   </section>
 
   <section id="s4">
-    <div class="sec-head"><span class="sec-no">4</span><h2>vibecoding 工作法：怎么让 AI 帮你干活</h2></div>
+    <div class="sec-head"><span class="sec-no">04</span><h2>vibecoding 工作法：怎么让 AI 帮你干活</h2></div>
     <hr class="sec-rule">
     <p>以后做任何项目，都按这三步用 AI 助手（Claude / Cursor / Copilot 都行）：</p>
     <ol class="steps">
@@ -256,12 +243,12 @@ node scripts/serve.js</code></pre>
   </section>
 
   <section id="s5">
-    <div class="sec-head"><span class="sec-no">5</span><h2>毕业任务：改一个参数，推上 GitHub</h2></div>
+    <div class="sec-head"><span class="sec-no">05</span><h2>毕业任务：改一个参数，推上 GitHub</h2></div>
     <hr class="sec-rule">
     <p>这是证明你"看懂了"的关键一步，也是作品集里最有说服力的提交记录：</p>
     <ol class="steps">
       <li>用 VS Code 打开 <code>js/config.js</code>，把颜色数组改成你喜欢的：
-        <pre><code>colors: ["#23221f", "#c0362c", "#7b4fa6", "#0f8a8a"],</code></pre></li>
+        <pre><code>colors: ["#e8f6ff", "#ff5d6c", "#7b6cff", "#35e08c"],</code></pre></li>
       <li>保存 → 刷新页面 → 按键盘 <code>1-4</code> 检查新颜色生效。</li>
       <li>提交并推送：
         <pre><code>git add js/config.js
@@ -273,7 +260,7 @@ git push</code></pre></li>
   </section>
 
   <section id="s6">
-    <div class="sec-head"><span class="sec-no">6</span><h2>下一站</h2></div>
+    <div class="sec-head"><span class="sec-no">06</span><h2>下一站</h2></div>
     <hr class="sec-rule">
     <p>数据流你已经全部掌握了，接下来只换"交互翻译器"就能做出完全不同的东西：</p>
     <table>
@@ -287,7 +274,7 @@ git push</code></pre></li>
   </section>
 
   <footer>
-    <span>手势草稿本 Gesture Sketchbook · 配套教程</span>
+    <span>手势草稿本 Gesture Sketchbook · NEON HUD · 配套教程</span>
     <span>遇到问题 → <a href="故障排查.html">先不慌，看排查手册</a></span>
   </footer>
 

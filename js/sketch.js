@@ -1,8 +1,8 @@
 // ============================================================
 // sketch.js —— 绘画引擎
-// 职责：把手指轨迹变成"铅笔草稿"笔迹，并绘制手部构造线。
+// 职责：把手指轨迹变成"霓虹灯管"笔迹，并绘制手部追踪 HUD。
 // 结构：strokes 保存已完成的笔画；base 离屏画布缓存已完成的画，
-//       每帧只叠加"正在画的这一笔 + 构造线"，保证长时间运行流畅。
+//       每帧只叠加"正在画的这一笔 + HUD 构造线"，保证长时间运行流畅。
 // ============================================================
 
 import { CONFIG } from "./config.js";
@@ -18,7 +18,7 @@ export class SketchPad {
     this.widthMode = 0;       // 0 自动 / 1 细 / 2 粗
     this.construction = false;
     this.hand = { present: false };
-    this.cursor = null;       // 当前指尖位置（画圆环提示）
+    this.cursor = null;       // 当前指尖位置(画圆环提示)
     this.dirty = true;
     this.w = 0;
     this.h = 0;
@@ -42,7 +42,7 @@ export class SketchPad {
   }
 
   // ---------- 坐标 ----------
-  // MediaPipe 关键点是 0~1 归一化坐标，这里映射到画布像素，并做镜像（自拍视角）
+  // MediaPipe 关键点是 0~1 归一化坐标,这里映射到画布像素,并做镜像(自拍视角)
   toCanvas(lm) {
     return { x: (1 - lm.x) * this.w, y: lm.y * this.h };
   }
@@ -150,7 +150,7 @@ export class SketchPad {
     if (this.cursor) {
       ctx.beginPath();
       ctx.arc(this.cursor.x, this.cursor.y, 7, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(43,42,38,.55)";
+      ctx.strokeStyle = "rgba(45, 216, 255, .8)";
       ctx.lineWidth = 1.5;
       ctx.setLineDash([3, 3]);
       ctx.stroke();
@@ -159,32 +159,39 @@ export class SketchPad {
     this.dirty = false;
   }
 
-  // 一笔铅笔线：先画一层"粗且淡"的晕影，再画主线，模拟铅笔压在纸上的质感
+  // 一笔霓虹线:先画一层宽而淡的能量晕影,再画带辉光的主线,模拟霓虹灯管发光
   _paint(ctx, stroke, opacityScale) {
     const pts = stroke.pts;
     if (pts.length < 2) return;
-    const draw = (width, alpha, dx, dy) => {
+    const draw = (width, alpha, glow) => {
       ctx.beginPath();
-      ctx.moveTo(pts[0][0] + dx, pts[0][1] + dy);
+      ctx.moveTo(pts[0][0], pts[0][1]);
       for (let i = 1; i < pts.length - 1; i++) {
-        const mx = (pts[i][0] + pts[i + 1][0]) / 2 + dx;
-        const my = (pts[i][1] + pts[i + 1][1]) / 2 + dy;
-        ctx.quadraticCurveTo(pts[i][0] + dx, pts[i][1] + dy, mx, my);
+        const mx = (pts[i][0] + pts[i + 1][0]) / 2;
+        const my = (pts[i][1] + pts[i + 1][1]) / 2;
+        ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
       }
-      ctx.lineTo(pts[pts.length - 1][0] + dx, pts[pts.length - 1][1] + dy);
+      ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
       ctx.strokeStyle = stroke.color;
       ctx.globalAlpha = alpha;
       ctx.lineWidth = width;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
+      if (glow) {
+        ctx.shadowColor = stroke.color;
+        ctx.shadowBlur = Math.min(18, width * 1.6);
+      } else {
+        ctx.shadowBlur = 0;
+      }
       ctx.stroke();
+      ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
     };
-    draw(stroke.width * 2.4, 0.14 * opacityScale, 0.9, 1.1);
-    draw(stroke.width, 0.92 * opacityScale, 0, 0);
+    draw(stroke.width * 2.4, 0.16 * opacityScale, false);
+    draw(stroke.width, 0.95 * opacityScale, true);
   }
 
-  // 手部构造线：圆圈标注指尖、虚线连接关节——"把算法的思考过程画出来"
+  // 手部追踪 HUD:圆圈锁定指尖、虚线连接关节、尺寸读数--把识别算法的"视线"画出来
   _construction(ctx) {
     const lm = this.hand.landmarks;
     const P = (i) => this.toCanvas(lm[i]);
@@ -192,10 +199,10 @@ export class SketchPad {
 
     ctx.save();
     ctx.setLineDash([5, 5]);
-    ctx.strokeStyle = "rgba(85,82,75,.5)";
+    ctx.strokeStyle = "rgba(45, 216, 255, .55)";
     ctx.lineWidth = 1.2;
 
-    // 手腕 -> 四指根 的辅助线（像画人物时的骨架线）
+    // 手腕 -> 四指根 的辅助线(像画人物时的骨架线)
     for (const mcp of [5, 9, 13, 17]) {
       const a = P(0), b = P(mcp);
       ctx.beginPath();
@@ -210,7 +217,7 @@ export class SketchPad {
       ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
       ctx.stroke();
     }
-    // "量手掌"：手腕到中指尖的尺寸线 + 两端的刻度
+    // "量手掌":手腕到中指尖的尺寸线 + 两端的刻度
     const wrist = P(0);
     const midTip = P(12);
     ctx.beginPath();
@@ -226,12 +233,12 @@ export class SketchPad {
       ctx.stroke();
     }
     ctx.setLineDash([]);
-    // 手掌尺寸标注
+    // 手掌尺寸读数
     const mx = (wrist.x + midTip.x) / 2;
     const my = (wrist.y + midTip.y) / 2;
-    ctx.font = '12px "Segoe Print", "Comic Sans MS", cursive';
-    ctx.fillStyle = "rgba(85,82,75,.75)";
-    ctx.fillText(`${Math.round(this.hand.size * 100)}`, mx + 8, my - 4);
+    ctx.font = '11px Consolas, "Cascadia Code", monospace';
+    ctx.fillStyle = "rgba(255, 180, 84, .9)";
+    ctx.fillText(`SIZE:${Math.round(this.hand.size * 100)}`, mx + 10, my - 4);
     ctx.restore();
   }
 }
