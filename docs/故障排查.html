@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>故障排查手册 · 手势草稿本</title>
+<style>
+  :root {
+    --paper: #f7f2e6; --canvas: #fdfaf2; --ink: #2b2a26; --graphite: #55524b;
+    --faint: #8a837a; --line: #c4b795; --accent: #c0362c;
+    --hand: "Segoe Print", "Comic Sans MS", "Marker Felt", cursive;
+    --ui: "Segoe UI", system-ui, "Microsoft YaHei", sans-serif;
+    --mono: Consolas, "Cascadia Code", "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--ink); font-family: var(--ui); font-size: 15.5px; line-height: 1.75;
+    background:
+      linear-gradient(rgba(43,42,38,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(43,42,38,.03) 1px, transparent 1px),
+      var(--paper);
+    background-size: 28px 28px, 28px 28px, auto;
+  }
+  .sheet { max-width: 780px; margin: 0 auto; padding: 48px 24px 80px; }
+  .kicker { font-size: 12px; letter-spacing: .35em; color: var(--faint); text-transform: uppercase; margin-bottom: 14px; }
+  h1 { font-family: var(--hand); font-weight: 600; font-size: 38px; margin: 0 0 8px; transform: rotate(-.5deg); }
+  .lede { color: var(--graphite); margin: 0 0 24px; max-width: 62ch; }
+  h2 { font-family: var(--hand); font-size: 24px; margin: 44px 0 6px; }
+  h2 .dot { color: var(--accent); }
+  .rule { border: none; border-top: 1px solid var(--line); margin: 10px 0 20px; }
+  p { margin: 0 0 12px; }
+  code { font-family: var(--mono); font-size: .9em; background: rgba(196,183,149,.22); padding: 1px 5px; border-radius: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.8px; margin: 0 0 10px; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { font-weight: 600; background: rgba(196,183,149,.15); }
+  .note { border: 2px dashed var(--line); background: var(--canvas); padding: 12px 18px; margin: 20px 0; font-size: 14.5px; color: var(--graphite); transform: rotate(-.3deg); }
+  .note b { font-family: var(--hand); color: var(--ink); }
+  ul.check { list-style: none; padding: 0; margin: 0 0 16px; }
+  ul.check li { padding: 5px 0 5px 30px; position: relative; border-bottom: 1px dashed rgba(196,183,149,.6); }
+  ul.check li::before {
+    content: ""; position: absolute; left: 2px; top: 9px; width: 14px; height: 14px;
+    border: 1.8px solid var(--ink); border-radius: 4px 6px 5px 7px / 6px 4px 7px 5px;
+  }
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--faint); }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="kicker">Gesture Sketchbook · 排查手册</div>
+  <h1>故障排查<span style="color:var(--accent)">与</span>常见问题</h1>
+  <p class="lede">按"现象 → 原因 → 解决"组织。解决不了时：按 F12 打开浏览器控制台，把红色报错截图发给 AI 助手。</p>
+
+  <div class="note"><b>万能求助模板</b>："我在跑 gesture-sketchbook 项目（本地 <code>node scripts/serve.js</code> 启动），报错如下：……请帮我定位。" 附上控制台截图。</div>
+
+  <h2><span class="dot">●</span> 摄像头问题</h2>
+  <hr class="rule">
+  <table>
+    <tr><th style="width:30%">现象</th><th>原因与解决</th></tr>
+    <tr><td>"摄像头权限被拒绝了"</td><td>之前点过"拒绝"被浏览器记住。点地址栏左侧锁/摄像头图标 → 改为"允许" → 点页面"重试摄像头"；或打开 <code>chrome://settings/content/camera</code> 检查</td></tr>
+    <tr><td>"没有检测到摄像头"</td><td>检查笔记本摄像头物理挡板/开关；外接摄像头换 USB 口重插</td></tr>
+    <tr><td>"摄像头被其他程序占用了"</td><td>关闭 Zoom / OBS / 腾讯会议等占用摄像头的软件 → 点"重试摄像头"</td></tr>
+    <tr><td>卡在"正在打开摄像头…"</td><td>驱动异常或被安全软件拦截：重启浏览器；设备管理器检查摄像头驱动</td></tr>
+    <tr><td>不想开摄像头</td><td>点"演示模式"，虚拟手自动演示全部手势</td></tr>
+  </table>
+
+  <h2><span class="dot">●</span> 识别与交互问题</h2>
+  <hr class="rule">
+  <table>
+    <tr><th style="width:30%">现象</th><th>原因与解决</th></tr>
+    <tr><td>手伸过去但不画</td><td>光线太暗 / 背景太乱 / 手太远。开灯、面对纯色背景、手掌距镜头 30–60cm 且完整入镜</td></tr>
+    <tr><td>手势切换不灵敏</td><td><code>js/config.js</code> 里 <code>stableFrames: 3</code> 改成 <code>2</code>（再小容易误触）</td></tr>
+    <tr><td>笔迹抖动明显</td><td><code>smoothing: 0.55</code> 调大到 <code>0.7</code>（代价是更"黏手"）</td></tr>
+    <tr><td>线条太细/太粗</td><td>手离镜头越近笔越粗；或用剪刀手手势固定粗细</td></tr>
+    <tr><td>误触发换色/清空</td><td>手掌正对镜头五指张开；把 <code>gestureThreshold</code> 提到 <code>0.7</code></td></tr>
+    <tr><td>捏合撤销总误触</td><td>调小 <code>pinchRatio</code>（如 <code>0.035</code>）</td></tr>
+  </table>
+
+  <h2><span class="dot">●</span> 页面与网络问题</h2>
+  <hr class="rule">
+  <table>
+    <tr><th style="width:30%">现象</th><th>原因与解决</th></tr>
+    <tr><td>页面白屏 / 摄像头不可用</td><td>直接双击打开了 index.html。摄像头只能在 https 或 localhost 下用：<code>node scripts/serve.js</code> 后开 <code>localhost:8000</code></td></tr>
+    <tr><td>一直"加载识别模型…"</td><td>首次需联网下载约 8MB 模型（Google CDN）。检查网络/代理，确认能访问 <code>storage.googleapis.com</code>，换网重试</td></tr>
+    <tr><td><code>node</code> 不是内部或外部命令</td><td>Node 没装好或没重启终端：重装 LTS 版本，重开命令行</td></tr>
+    <tr><td><code>Error: listen EADDRINUSE</code></td><td>8000 端口被占：<code>node scripts/serve.js 8080</code> 换端口</td></tr>
+  </table>
+
+  <h2><span class="dot">●</span> GitHub 与部署问题</h2>
+  <hr class="rule">
+  <table>
+    <tr><th style="width:30%">现象</th><th>原因与解决</th></tr>
+    <tr><td>push 要求登录</td><td>装 GitHub CLI 执行 <code>gh auth login</code>；或 HTTPS 方式用浏览器弹窗登录</td></tr>
+    <tr><td>push 被拒 non-fast-forward</td><td>远端有你本地没有的提交（比如在网页上改过 README）：先 <code>git pull --rebase</code> 再 push</td></tr>
+    <tr><td>GitHub Pages 打开 404</td><td>Settings → Pages 确认 Source 是 <code>main</code> 分支根目录；等 1–2 分钟后强刷</td></tr>
+    <tr><td>改了代码线上没变化</td><td><code>Ctrl+F5</code> 强刷；等部署完成（仓库 Actions 页可看进度）</td></tr>
+    <tr><td>在线版打不开摄像头</td><td>GitHub Pages 自带 https，正常可用；自定义域名需配置 https</td></tr>
+  </table>
+
+  <h2><span class="dot">●</span> 出问题先过一遍自检清单</h2>
+  <hr class="rule">
+  <ul class="check">
+    <li><code>node -v</code> 有版本号</li>
+    <li>页面是用 <code>localhost:8000</code> 打开的（不是 file://）</li>
+    <li>摄像头权限 = 允许，且没被其他软件占用</li>
+    <li>光线充足、手掌完整入镜</li>
+    <li>F12 控制台没有红色报错</li>
+    <li>改参数后刷新了页面（Ctrl+F5）</li>
+  </ul>
+
+  <footer>手势草稿本 Gesture Sketchbook · 排查手册 —— <a href="学习路线.html">返回学习路线</a></footer>
+</div>
+</body>
+</html>

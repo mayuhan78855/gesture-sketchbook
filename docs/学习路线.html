@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vibecoding 手势交互学习路线 · 零基础陪跑手册</title>
+<style>
+  :root {
+    --paper: #f7f2e6;
+    --canvas: #fdfaf2;
+    --ink: #2b2a26;
+    --graphite: #55524b;
+    --faint: #8a837a;
+    --line: #c4b795;
+    --accent: #c0362c;
+    --hand: "Segoe Print", "Comic Sans MS", "Marker Felt", cursive;
+    --ui: "Segoe UI", system-ui, "Microsoft YaHei", sans-serif;
+    --mono: Consolas, "Cascadia Code", "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--ui);
+    font-size: 16px;
+    line-height: 1.75;
+    background:
+      linear-gradient(rgba(43,42,38,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(43,42,38,.03) 1px, transparent 1px),
+      var(--paper);
+    background-size: 28px 28px, 28px 28px, auto;
+  }
+  .sheet { max-width: 720px; margin: 0 auto; padding: 56px 24px 80px; }
+
+  /* ---------- 头部 ---------- */
+  .kicker {
+    font-size: 12px; letter-spacing: .35em; color: var(--faint);
+    text-transform: uppercase; margin-bottom: 18px;
+  }
+  h1 {
+    font-family: var(--hand); font-weight: 600; font-size: 44px;
+    line-height: 1.2; margin: 0 0 10px; letter-spacing: .01em;
+    transform: rotate(-.5deg);
+  }
+  h1 .accent { color: var(--accent); }
+  .lede { font-size: 18px; color: var(--graphite); margin: 0 0 26px; max-width: 60ch; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 26px;
+    font-size: 13px; color: var(--faint);
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    padding: 10px 2px; margin-bottom: 40px;
+  }
+  .meta b { color: var(--graphite); font-weight: 600; }
+
+  /* ---------- 目录 ---------- */
+  nav.toc { margin: 0 0 52px; padding: 18px 22px; border: 2px dashed var(--line); background: var(--canvas); }
+  nav.toc .toc-title { font-family: var(--hand); font-size: 15px; margin-bottom: 8px; color: var(--graphite); }
+  nav.toc ol { margin: 0; padding-left: 22px; }
+  nav.toc li { margin: 4px 0; font-size: 14.5px; }
+  nav.toc a { color: var(--ink); text-decoration: none; border-bottom: 1px dashed var(--line); }
+  nav.toc a:hover { border-bottom-color: var(--accent); color: var(--accent); }
+
+  /* ---------- 章节 ---------- */
+  section { margin-bottom: 58px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
+  .sec-no {
+    font-family: var(--hand); font-size: 13px; color: var(--accent);
+    border: 1.6px solid var(--accent); border-radius: 50% 46% 52% 48% / 48% 52% 46% 52%;
+    width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transform: rotate(-3deg);
+  }
+  h2 { font-family: var(--hand); font-size: 27px; font-weight: 600; margin: 0; letter-spacing: .01em; }
+  .sec-rule { border: none; border-top: 1px solid var(--line); margin: 14px 0 22px; position: relative; }
+  .sec-rule::after {
+    content: ""; position: absolute; right: 0; top: -4px; width: 60px;
+    border-top: 1px dashed var(--line);
+  }
+  p { margin: 0 0 14px; }
+  strong { font-weight: 600; }
+  em.hand { font-family: var(--hand); font-style: normal; color: var(--accent); }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(192,54,44,.35); }
+  a:hover { border-bottom-style: dashed; }
+
+  /* ---------- 代码 ---------- */
+  pre {
+    font-family: var(--mono); font-size: 13.5px; line-height: 1.7;
+    background: var(--canvas); border: 1px solid var(--line);
+    border-radius: 2px; padding: 14px 16px; overflow-x: auto; margin: 0 0 14px;
+  }
+  code { font-family: var(--mono); font-size: .92em; background: rgba(196,183,149,.22); padding: 1px 5px; border-radius: 2px; }
+  pre code { background: none; padding: 0; }
+
+  /* ---------- 表格 ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 0 0 14px; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { font-weight: 600; background: rgba(196,183,149,.15); }
+  td code { white-space: nowrap; }
+
+  /* ---------- 批注便签 ---------- */
+  .note {
+    border: 2px dashed var(--line); background: var(--canvas);
+    padding: 12px 18px; margin: 0 0 16px; font-size: 14.5px; color: var(--graphite);
+    transform: rotate(-.4deg);
+  }
+  .note b { font-family: var(--hand); color: var(--ink); }
+
+  /* ---------- 数据流图 ---------- */
+  .flow { display: flex; align-items: stretch; gap: 0; margin: 6px 0 18px; flex-wrap: wrap; }
+  .flow .node {
+    flex: 1 1 150px; border: 2px solid var(--ink); background: var(--canvas);
+    border-radius: 255px 12px 225px 12px / 12px 225px 12px 255px;
+    padding: 10px 14px; text-align: center;
+  }
+  .flow .node .t { font-family: var(--hand); font-size: 15.5px; }
+  .flow .node .d { font-size: 12px; color: var(--faint); margin-top: 2px; }
+  .flow .arrow { align-self: center; font-size: 20px; color: var(--faint); padding: 0 6px; font-family: var(--mono); }
+
+  /* ---------- 步骤列表（毕业任务） ---------- */
+  ol.steps { counter-reset: step; list-style: none; margin: 0 0 16px; padding: 0; }
+  ol.steps li { counter-increment: step; position: relative; padding: 0 0 18px 52px; }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    font-family: var(--hand); font-size: 14px; color: var(--accent);
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    border: 1.6px dashed var(--accent); border-radius: 48% 52% 50% 50% / 52% 46% 54% 48%;
+  }
+  ol.steps li::after { content: ""; position: absolute; left: 14px; top: 32px; bottom: 2px; border-left: 1px dashed var(--line); }
+  ol.steps li:last-child::after { display: none; }
+
+  /* ---------- 成品图 ---------- */
+  figure { margin: 0 0 18px; }
+  figure img { width: 100%; border: 2px solid var(--ink); border-radius: 3px; display: block; }
+  figure figcaption { font-size: 12.5px; color: var(--faint); margin-top: 6px; font-family: var(--hand); }
+
+  footer {
+    margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line);
+    font-size: 12.5px; color: var(--faint); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+  @media (max-width: 560px) { h1 { font-size: 34px; } .sheet { padding-top: 40px; } }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <div class="kicker">Vibecoding · 零基础陪跑手册</div>
+    <h1>手势交互<span class="accent">学习路线</span></h1>
+    <p class="lede">从"没写过一行代码"到"GitHub 上有自己署名的手势交互作品"。全程 6 个阶段，每一小步都附命令和"你应该看到什么"。</p>
+    <div class="meta">
+      <span><b>总耗时</b> 约 2.5 小时</span>
+      <span><b>难度</b> 零基础</span>
+      <span><b>产出</b> 可运行的 Web 应用 + GitHub 仓库 + 在线演示</span>
+      <span><b>配套项目</b> gesture-sketchbook</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <div class="toc-title">路线图</div>
+    <ol>
+      <li><a href="#s0">阶段 0 · 心态与地图 —— vibecoding 到底在循环什么</a></li>
+      <li><a href="#s1">阶段 1 · 装工具 —— Node.js / VS Code / Git / GitHub</a></li>
+      <li><a href="#s2">阶段 2 · 把项目跑起来 —— 第一次看到自己的手在画画</a></li>
+      <li><a href="#s3">阶段 3 · 读懂代码 —— 只需要看懂的 4 个文件</a></li>
+      <li><a href="#s4">阶段 4 · vibecoding 工作法 —— 怎么让 AI 帮你干活</a></li>
+      <li><a href="#s5">阶段 5 · 毕业任务 —— 改一个参数，推上 GitHub</a></li>
+      <li><a href="#s6">阶段 6 · 下一站</a></li>
+    </ol>
+  </nav>
+
+  <figure>
+    <img src="../assets/demo.gif" alt="手势草稿本演示动图：虚拟手画五角星、换色、开启构造线、画红心、清空画布">
+    <figcaption>你将做出的东西：手势草稿本 Gesture Sketchbook（14 秒演示）</figcaption>
+  </figure>
+
+  <section id="s0">
+    <div class="sec-head"><span class="sec-no">0</span><h2>心态与地图</h2></div>
+    <hr class="sec-rule">
+    <p>vibecoding 的核心不是"背语法"，而是一个循环：<strong>描述 → 生成 → 验证 → 修改</strong>。你负责描述想要什么、判断结果对不对；AI 负责写代码。这门课的全部内容，就是带你把这个循环完整跑通一遍。</p>
+    <p>整个项目的数据流只有三段。记住这张图，后面所有代码都能对上号：</p>
+    <div class="flow">
+      <div class="node"><div class="t">摄像头</div><div class="d">视频帧 · 每秒 60 帧</div></div>
+      <div class="arrow">--&gt;</div>
+      <div class="node"><div class="t">手势识别</div><div class="d">21 个关键点 + 手势名</div></div>
+      <div class="arrow">--&gt;</div>
+      <div class="node"><div class="t">画笔交互</div><div class="d">笔迹 · 颜色 · 构造线</div></div>
+    </div>
+    <p>对应到文件：<code>gestures.js</code> 管前两段，<code>sketch.js</code> 和 <code>app.js</code> 管最后一段。所有"可以随便改"的参数，都集中在 <code>config.js</code> 一个文件里。</p>
+  </section>
+
+  <section id="s1">
+    <div class="sec-head"><span class="sec-no">1</span><h2>装工具</h2></div>
+    <hr class="sec-rule">
+    <p>只需要 3 样东西，全部免费：</p>
+    <table>
+      <tr><th>工具</th><th>用途</th><th>下载地址</th><th>验证命令</th></tr>
+      <tr><td>Node.js</td><td>跑本地服务器、跑测试</td><td><a href="https://nodejs.org/zh-cn">nodejs.org</a>（选 LTS）</td><td><code>node -v</code></td></tr>
+      <tr><td>VS Code</td><td>看代码、改代码</td><td><a href="https://code.visualstudio.com">code.visualstudio.com</a></td><td>能打开就行</td></tr>
+      <tr><td>Git</td><td>保存版本、上传 GitHub</td><td><a href="https://git-scm.com/download/win">git-scm.com</a></td><td><code>git --version</code></td></tr>
+    </table>
+    <p>装完后打开命令行（Windows 按 <code>Win+R</code> 输入 <code>cmd</code> 回车），逐条输入验证命令，看到版本号（如 <code>v22.22.0</code>）就是成功。</p>
+    <p>再注册一个 GitHub 账号（<a href="https://github.com/signup">github.com/signup</a>）。想用命令行上传的话，装 GitHub CLI 后执行：</p>
+    <pre><code>gh auth login</code></pre>
+    <div class="note"><b>为什么需要 Node.js？</b> 摄像头权限只在 https 或 localhost 下可用，所以页面必须通过本地服务器打开，直接双击 index.html 是用不了摄像头的。Node 就是用来一键启动这个服务器的。</div>
+  </section>
+
+  <section id="s2">
+    <div class="sec-head"><span class="sec-no">2</span><h2>把项目跑起来</h2></div>
+    <hr class="sec-rule">
+    <pre><code>git clone https://github.com/mayuhan78855/gesture-sketchbook.git
+cd gesture-sketchbook
+node scripts/serve.js</code></pre>
+    <p>浏览器打开 <code>http://localhost:8000</code>：</p>
+    <ol class="steps">
+      <li>弹出摄像头授权 → 点<strong>"允许"</strong>。右上角状态灯变绿、显示"已就绪"。</li>
+      <li>手伸到镜头前 30–60cm，<em class="hand">张开手掌</em>——移动手，纸上出现铅笔笔迹。</li>
+      <li>试试其他手势：握拳换颜色、食指上指开构造线、剪刀手换笔刷、点赞清空。</li>
+      <li>没有摄像头？点右侧"演示模式"，一只虚拟手会自动表演全部交互。</li>
+    </ol>
+    <figure>
+      <img src="../assets/screenshots/demo-heart-construction.png" alt="构造线开启状态：红色爱心笔迹 + 手部骨架虚线">
+      <figcaption>你应该看到的效果：构造线模式下，手部骨架会以虚线画在纸上</figcaption>
+    </figure>
+  </section>
+
+  <section id="s3">
+    <div class="sec-head"><span class="sec-no">3</span><h2>读懂代码：只需要看 4 个文件</h2></div>
+    <hr class="sec-rule">
+    <p>每个文件只干一件事——这是好项目的通例，也是你能快速上手的理由：</p>
+    <table>
+      <tr><th>文件</th><th>你要理解的一件事</th></tr>
+      <tr><td><code>js/config.js</code></td><td>所有"可调参数"集中在这：颜色、笔刷、平滑、阈值。改这里 = 改行为</td></tr>
+      <tr><td><code>js/app.js</code></td><td><code>onGesture()</code> 里的 switch——"手势名 → 具体动作"的翻译器</td></tr>
+      <tr><td><code>js/gestures.js</code></td><td><code>recognizeForVideo()</code> 每帧调一次，吐出 21 个关键点 + 手势名</td></tr>
+      <tr><td><code>js/sketch.js</code></td><td><code>begin() / addPoint() / end()</code>——一笔的生命周期</td></tr>
+    </table>
+    <p>推荐阅读顺序：<code>config.js</code> → <code>app.js</code> 的 <code>onGesture</code> → <code>gestures.js</code> 的 <code>_handle</code> → <code>sketch.js</code> 的 <code>render</code>。</p>
+    <p>两个值得停下来想 1 分钟的细节：</p>
+    <p><strong>防抖</strong>——<code>stableFrames: 3</code> 表示"连续 3 帧识别到同一手势才生效"。没有它，手势会在握拳/张开之间闪烁，颜色会连跳好几次。<br>
+    <strong>平滑</strong>——<code>smoothing: 0.55</code> 是指数平滑，让笔迹跟手又不抖成筛糠。这两个参数就是手势交互"手感"的全部秘密。</p>
+  </section>
+
+  <section id="s4">
+    <div class="sec-head"><span class="sec-no">4</span><h2>vibecoding 工作法：怎么让 AI 帮你干活</h2></div>
+    <hr class="sec-rule">
+    <p>以后做任何项目，都按这三步用 AI 助手（Claude / Cursor / Copilot 都行）：</p>
+    <ol class="steps">
+      <li><strong>描述目标，不说实现</strong>："我要一个网页，摄像头识别握拳后把画笔换成红色。"——先让它跑起来，再问细节。</li>
+      <li><strong>指着代码问为什么</strong>："<code>stableFrames</code> 调成 1 会怎样？"——让 AI 解释任何你看不懂的行，问到懂为止。</li>
+      <li><strong>小步改 + 立刻验证</strong>：每次只改一个参数 → 刷新页面 → 确认效果 → 满意就提交。永远别一次改十个地方。</li>
+    </ol>
+    <p>万能提问模板：</p>
+    <pre><code>我在做一个浏览器手势绘画项目（仓库：xxx）。
+现在我想要【你想要的效果】。
+请先解释需要改动哪个文件、为什么，再给出具体修改。</code></pre>
+  </section>
+
+  <section id="s5">
+    <div class="sec-head"><span class="sec-no">5</span><h2>毕业任务：改一个参数，推上 GitHub</h2></div>
+    <hr class="sec-rule">
+    <p>这是证明你"看懂了"的关键一步，也是作品集里最有说服力的提交记录：</p>
+    <ol class="steps">
+      <li>用 VS Code 打开 <code>js/config.js</code>，把颜色数组改成你喜欢的：
+        <pre><code>colors: ["#23221f", "#c0362c", "#7b4fa6", "#0f8a8a"],</code></pre></li>
+      <li>保存 → 刷新页面 → 按键盘 <code>1-4</code> 检查新颜色生效。</li>
+      <li>提交并推送：
+        <pre><code>git add js/config.js
+git commit -m "feat: 换上我的画笔配色"
+git push</code></pre></li>
+      <li>一分钟后打开你的仓库页面，点最近一次提交，应能看到这行改动；GitHub Pages 上的在线版本也会自动同步。</li>
+    </ol>
+    <div class="note"><b>完成标志</b>：GitHub 仓库的 commit 列表里，出现一条你自己写的提交。这就是你在 vibecoding 世界里的第一个签名。</div>
+  </section>
+
+  <section id="s6">
+    <div class="sec-head"><span class="sec-no">6</span><h2>下一站</h2></div>
+    <hr class="sec-rule">
+    <p>数据流你已经全部掌握了，接下来只换"交互翻译器"就能做出完全不同的东西：</p>
+    <table>
+      <tr><th>方向</th><th>怎么起步</th></tr>
+      <tr><td>新增手势</td><td>给 <code>onGesture</code> 加一个 <code>ILoveYou</code> case（recognizer 自带这个类别），触发时自动画一颗星</td></tr>
+      <tr><td>双手绘制</td><td>把 <code>gestures.js</code> 里 <code>numHands: 1</code> 改成 2，看看会发生什么</td></tr>
+      <tr><td>音乐画布</td><td>接 Web Audio API，用音量控制笔刷粗细——数据流不变</td></tr>
+      <tr><td>自己的模型</td><td>MediaPipe 支持自定义手势模型；先用 Teachable Machine 体验思路</td></tr>
+    </table>
+    <p>学到这里的你，已经跑通了 vibecoding 的完整循环。下一个项目，从一句"我想要……"开始。</p>
+  </section>
+
+  <footer>
+    <span>手势草稿本 Gesture Sketchbook · 配套教程</span>
+    <span>遇到问题 → <a href="故障排查.html">先不慌，看排查手册</a></span>
+  </footer>
+
+</div>
+</body>
+</html>
