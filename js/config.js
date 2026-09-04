@@ -4,13 +4,13 @@
 // ============================================================
 
 export const CONFIG = {
-  // 画笔颜色（霓虹色板，适配深色画布）：第 1 个是默认色。练手任务：往数组里加一种你喜欢的颜色（任意 #RRGGBB）
+  // 画笔/粒子共用霓虹色板（适配深色画布）：第 1 个是默认色。练手任务：往数组里加一种你喜欢的颜色（任意 #RRGGBB）
   colors: ["#e8f6ff", "#2dd8ff", "#ff5d6c", "#ffb454", "#7b6cff"],
 
   // 笔刷粗细范围(像素):实际粗细随"手掌大小"自动变化,手掌离镜头越近笔触越粗
   strokeWidth: { min: 2.5, max: 16 },
 
-  // 线条“能量抖动”强度：让霓虹笔迹带一点示波器的不规则感，调成 0 就是平滑直线
+  // 线条"能量抖动"强度:让霓虹笔迹带一点示波器的不规则感,调成 0 就是平滑直线
   jitter: 1.1,
 
   // 手部位置平滑系数(0~1):越大越稳、跟手越"黏";调小更灵敏但更抖
@@ -32,7 +32,20 @@ export const CONFIG = {
   // 最多保留的笔画数:超出后丢弃最旧的
   maxStrokes: 500,
 
-  // MediaPipe 资源地址(首次打开需联网下载模型,之后浏览器会缓存)
+  // ---------- 粒子系统（粒子模式）----------
+  particles: {
+    max: 2600,             // 同屏最大粒子数（低配电脑调低到 1200）
+    streamPerFrame: 6,     // 绘制流：每帧从指尖喷出的粒子数
+    fountainPerFrame: 9,   // 离子喷泉：每帧喷射数
+    burstCount: 240,       // 能量爆发：一次爆发的粒子数
+    novaCount: 420,        // 超新星清空：爆发粒子数
+    trailFade: 0.22,       // 拖影长度：越小尾巴越长
+    gravity: 90,           // 默认重力（px/s²），个别效果可覆盖
+    handDragRadius: 190,   // 掌风半径：手掌挥动带动周围粒子的范围
+    handDragStrength: 0.35,// 掌风强度：动作驱动的力度
+  },
+
+  // MediaPipe 资源地址（首次打开需联网下载模型，之后浏览器会缓存）
   wasmCDN: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
   modelURL: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
 };

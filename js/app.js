@@ -1,12 +1,16 @@
 // ============================================================
 // app.js —— 应用入口
-// 职责：把 手势识别引擎(GestureEngine) 和 绘画引擎(SketchPad) 接起来
-//       管理 UI（状态灯、提示、错误面板、按钮）与两种模式（摄像头 / 演示）
+// 职责：连接 手势识别引擎(GestureEngine) 和 两个渲染器：
+//       · 粒子模式（默认）：ParticleSystem + effects.js 效果注册表
+//       · 笔迹模式（?mode=ink 或侧栏切换）：SketchPad 霓虹笔迹
+// 手势→动作的翻译全部走"注册表驱动"，新增效果见 js/effects.js 文件头。
 // ============================================================
 
 import { CONFIG, GESTURE_INFO } from "./config.js";
 import { GestureEngine } from "./gestures.js";
 import { SketchPad } from "./sketch.js";
+import { ParticleSystem } from "./particles.js";
+import { EFFECTS } from "./effects.js";
 
 const $ = (s) => document.querySelector(s);
 const canvas = $("#paper");
@@ -19,13 +23,33 @@ const errorPanel = $("#errorPanel");
 const camStatus = $("#camStatus");
 const swatchesEl = $("#swatches");
 const constrToggle = $("#constrToggle");
+const legendEl = document.querySelector(".legend");
 
 const pad = new SketchPad(canvas);
+const ps = new ParticleSystem(canvas);
+
+let renderMode = new URLSearchParams(location.search).get("mode") === "ink" ? "ink" : "particles";
 let engine = null;
 let demo = null;
-let mode = "paper"; // 'paper' | 'camera' | 'demo'
+let mode = "paper"; // 运行状态：paper | camera | demo
 let lastGesture = "None";
 let toastTimer = 0;
+let _raf = 0;
+let loopT = 0;
+let frameTick = 0;
+let lastHand = null;
+let prevPalm = null, prevT = 0;
+const vel = { x: 0, y: 0 };
+
+// 笔迹模式图例的图标（与 effects.js 里注册表的 glyph 同一套线条风）
+const GLYPHS = {
+  Open_Palm: "M5 12 L5 7 M9 12 L9 5 M13 12 L13 5 M17 12 L17 7 M5 12 Q10 16 17 12 L17 10",
+  Closed_Fist: "M6 9 Q7 6 12 6 Q17 6 18 9 L18 12 Q18 15 12 15 Q6 15 6 12 Z M7 10 L7 11",
+  Pointing_Up: "M10 14 L10 5 M10 5 Q10 3.4 11.4 3.4 Q12.8 3.4 12.8 5 L12.8 14 Q12.8 15.5 11.4 15.5 Q10 15.5 10 14 M8 18 L14 18",
+  Victory: "M8 18 L8 8 M8 8 Q8 6.5 9.3 6.5 Q10.6 6.5 10.6 8 L10.6 16 M14 18 L14 6 M14 6 Q14 4.5 15.2 4.5 Q16.4 4.5 16.4 6 L16.4 16",
+  Thumb_Up: "M7 12 L7 6 M7 6 Q7 4.5 8.3 4.5 Q9.6 4.5 9.6 6 L9.6 12 M7 12 Q11 11 17 11.5 L17 14 Q17 16.5 13.5 16.5 L10 16.5",
+  Thumb_Index: "M6 10 L10 14 M10 14 Q11.5 15.5 12 15.5 M12 4 L15 7 M15 7 Q16.5 8.5 16.5 9 M16.5 9 L20 13",
+};
 
 // ---------- 小工具 ----------
 function setStatus(text, kind = "idle") {
@@ -77,9 +101,139 @@ function finishError(fn) {
   fn();
 }
 
-// ---------- 手势 -> 交互 的映射（这是整个项目最核心的一段）----------
+// ---------- 手部上下文（两个渲染模式共用） ----------
+function computeHand(f) {
+  if (!f.landmarks) return null;
+  const tip = pad.toCanvas(f.landmarks[8]);
+  const pip = pad.toCanvas(f.landmarks[6]);
+  const palmIdx = [0, 5, 9, 13, 17];
+  let px = 0, py = 0;
+  for (const i of palmIdx) {
+    const p = pad.toCanvas(f.landmarks[i]);
+    px += p.x; py += p.y;
+  }
+  const palm = { x: px / palmIdx.length, y: py / palmIdx.length };
+  const midTip = pad.toCanvas(f.landmarks[12]);
+
+  // 掌心速度（指数平滑），供"掌风"与粒子喷射初速度使用
+  const now = performance.now();
+  if (prevPalm && prevT) {
+    const dt = Math.max(4, now - prevT) / 1000;
+    const ivx = (palm.x - prevPalm.x) / dt;
+    const ivy = (palm.y - prevPalm.y) / dt;
+    vel.x += (ivx - vel.x) * 0.4;
+    vel.y += (ivy - vel.y) * 0.4;
+  }
+  prevPalm = palm;
+  prevT = now;
+
+  const dx = tip.x - pip.x, dy = tip.y - pip.y;
+  const dl = Math.hypot(dx, dy) || 1;
+  return {
+    landmarks: f.landmarks,
+    tip, palm,
+    mid: { x: (tip.x + midTip.x) / 2, y: (tip.y + midTip.y) / 2 },
+    dir: { x: dx / dl, y: dy / dl },
+    vel: { x: vel.x, y: vel.y },
+    size: f.size,
+    color: CONFIG.colors[pad.colorIdx],
+  };
+}
+
+// ---------- 粒子模式：每帧入口 ----------
+function particleFrame(f) {
+  const hand = computeHand(f);
+  lastHand = hand;
+
+  // 效果注册表分发：进入 / 持续 / 退出
+  if (f.gesture !== lastGesture) {
+    const old = EFFECTS[lastGesture];
+    if (old && old.onExit) old.onExit(hand, ps);
+    const cur = EFFECTS[f.gesture];
+    if (cur && cur.onEnter) cur.onEnter(hand, ps);
+    lastGesture = f.gesture;
+  }
+  const eff = EFFECTS[f.gesture];
+  if (eff && eff.onFrame && hand) eff.onFrame(hand, ps);
+}
+
+// 粒子模式渲染循环：统一在这里做物理更新与绘制（无手时也保持画面活着）
+function particleLoop() {
+  if (renderMode !== "particles") return;
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - (loopT || now)) / 1000);
+  loopT = now;
+
+  const wind = lastHand
+    ? { x: lastHand.palm.x, y: lastHand.palm.y, vx: lastHand.vel.x, vy: lastHand.vel.y, r: CONFIG.particles.handDragRadius, strength: CONFIG.particles.handDragStrength }
+    : null;
+  ps.update(dt, wind);
+  ps.render((ctx) => { if (lastHand) drawHud(ctx, lastHand); });
+
+  hint.classList.toggle("hidden", !!lastHand);
+  if (++frameTick % 30 === 0) {
+    camStatus.textContent = mode === "camera" ? `TRACKING · ${ps.count} PARTICLES` : `DEMO · ${ps.count} PARTICLES`;
+  }
+  _raf = requestAnimationFrame(particleLoop);
+}
+
+// 手部追踪 HUD：青色虚线骨架 + 琥珀色尺寸读数
+function drawHud(ctx, hand) {
+  const lm = hand.landmarks;
+  const P = (i) => pad.toCanvas(lm[i]);
+  ctx.save();
+  ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = "rgba(45, 216, 255, .5)";
+  ctx.lineWidth = 1.2;
+  for (const mcp of [5, 9, 13, 17]) {
+    const a = P(0), b = P(mcp);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  for (const i of [4, 8, 12, 16, 20]) {
+    const p = P(i);
+    ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  const wrist = P(0), midTip = P(12);
+  ctx.font = '11px Consolas, "Cascadia Code", monospace';
+  ctx.fillStyle = "rgba(255, 180, 84, .9)";
+  ctx.fillText(`SIZE:${Math.round(hand.size * 100)}`, (wrist.x + midTip.x) / 2 + 10, (wrist.y + midTip.y) / 2 - 4);
+  ctx.restore();
+}
+
+// ---------- 笔迹模式：每帧入口（原有逻辑） ----------
+function inkFrame(f) {
+  pad.hand = f.landmarks ? { landmarks: f.landmarks, size: f.size, present: true } : { present: false };
+
+  // 张开手掌 = 绘制；食指尖(8)就是笔尖
+  if (f.gesture === "Open_Palm" && f.landmarks) {
+    pad.begin();
+    const pt = pad.toCanvas(f.landmarks[8]);
+    pad.addPoint(pt.x, pt.y, f.size);
+    pad.cursor = pt;
+    pad.dirty = true;
+  } else {
+    pad.end();
+    pad.cursor = null;
+  }
+
+  // 手在场时构造线/光标要跟着动，强制每帧重绘
+  if (f.landmarks) pad.dirty = true;
+  hint.classList.toggle("hidden", !!f.landmarks);
+  if (pad.dirty) pad.render();
+}
+
+// ---------- 统一帧入口 ----------
+function onFrame(f) {
+  if (renderMode === "particles") particleFrame(f);
+  else inkFrame(f);
+}
+
+// ---------- 一次性手势事件（笔迹模式的动作在这里；粒子模式走注册表） ----------
 function onGesture(g) {
+  if (renderMode === "particles") return; // 粒子模式在 particleFrame 里分发，不能提前改 lastGesture
   lastGesture = g;
+
   switch (g) {
     case "Closed_Fist":
       pad.cycleColor();
@@ -107,29 +261,30 @@ function onGesture(g) {
   }
 }
 
-function onFrame(f) {
-  pad.hand = f.landmarks ? { landmarks: f.landmarks, size: f.size, present: true } : { present: false };
-
-  // 张开手掌 = 绘制；食指尖(8)就是笔尖
-  if (f.gesture === "Open_Palm" && f.landmarks) {
-    pad.begin();
-    const pt = pad.toCanvas(f.landmarks[8]);
-    pad.addPoint(pt.x, pt.y, f.size);
-    pad.cursor = pt;
-    pad.dirty = true;
-  } else {
-    pad.end();
-    pad.cursor = null;
-  }
-
-  // 手在场时构造线/光标要跟着动，强制每帧重绘
-  if (f.landmarks) pad.dirty = true;
-
-  hint.classList.toggle("hidden", !!f.landmarks);
-  if (pad.dirty) pad.render();
+// ---------- 模式切换 ----------
+function setRenderMode(m) {
+  if (renderMode === m) return;
+  renderMode = m;
+  cancelAnimationFrame(_raf);
+  ps.killAll(0);
+  ps.attractors.length = 0;
+  ps.vortices.length = 0;
+  lastGesture = "None";
+  prevPalm = null;
+  const checkWrap = constrToggle.closest(".check");
+  if (checkWrap) checkWrap.classList.toggle("hidden", m === "particles");
+  buildLegend();
+  syncModeButtons();
+  if (m === "particles") particleLoop();
+  else { ps._resize(); pad._resize(); showToast(m === "ink" ? "笔迹模式" : "粒子模式"); }
 }
 
-// ---------- 模式 ----------
+function syncModeButtons() {
+  $("#btnModeParticles").classList.toggle("ghost", renderMode !== "particles");
+  $("#btnModeInk").classList.toggle("ghost", renderMode !== "ink");
+}
+
+// ---------- 摄像头 / 演示 ----------
 async function startCamera() {
   stopDemo();
   mode = "camera";
@@ -156,7 +311,6 @@ function startDemo() {
   stopEngine();
   mode = "demo";
   demoBadge.classList.remove("hidden");
-  camStatus.textContent = "演示模式 · 虚拟手";
   setStatus("演示模式运行中", "demo");
   import("./demo.js").then(({ DemoHand }) => {
     demo = new DemoHand({ onFrame, onGesture });
@@ -171,7 +325,7 @@ function stopEngine() {
   if (engine) { engine.stop(); engine = null; }
 }
 
-// ---------- UI 绑定 ----------
+// ---------- UI ----------
 function syncSwatches() {
   [...swatchesEl.children].forEach((el, i) =>
     el.classList.toggle("active", i === pad.colorIdx)
@@ -191,11 +345,27 @@ function buildSwatches() {
   syncSwatches();
 }
 
+function buildLegend() {
+  legendEl.innerHTML = "";
+  const items = renderMode === "particles"
+    ? Object.entries(EFFECTS).map(([g, e]) => ({ glyph: e.glyph, text: `${e.label} · ${e.hint}` }))
+    : Object.entries(GESTURE_INFO)
+        .filter(([g]) => g !== "None" && GLYPHS[g])
+        .map(([g, info]) => ({ glyph: GLYPHS[g], text: `${info.label} · ${info.hint}` }));
+  for (const it of items) {
+    const li = document.createElement("li");
+    li.innerHTML = `<svg viewBox="0 0 24 24" class="glyph"><path d="${it.glyph}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>${it.text}</span>`;
+    legendEl.appendChild(li);
+  }
+}
+
 $("#btnUndo").addEventListener("click", () => { pad.undo(); showToast("撤销上一笔"); });
-$("#btnClear").addEventListener("click", () => { pad.clear(); showToast("已清空画布"); });
+$("#btnClear").addEventListener("click", () => { pad.clear(); ps.killAll(0); showToast("已清空"); });
 $("#btnSave").addEventListener("click", () => pad.exportPNG());
 $("#btnDemo").addEventListener("click", startDemo);
 $("#btnCam").addEventListener("click", startCamera);
+$("#btnModeParticles").addEventListener("click", () => setRenderMode("particles"));
+$("#btnModeInk").addEventListener("click", () => setRenderMode("ink"));
 constrToggle.addEventListener("change", () => {
   pad.construction = constrToggle.checked;
   pad.dirty = true;
@@ -208,22 +378,37 @@ document.addEventListener("keydown", (e) => {
     const i = Number(e.key) - 1;
     if (i < CONFIG.colors.length) { pad.setColor(i); syncSwatches(); }
   }
-  if (e.key.toLowerCase() === "c") { const on = pad.toggleConstruction(); constrToggle.checked = on; }
+  if (e.key.toLowerCase() === "c" && renderMode === "ink") {
+    const on = pad.toggleConstruction();
+    constrToggle.checked = on;
+  }
 });
 
 // ---------- 暴露给自动化测试的钩子 ----------
 window.__app = {
+  get renderMode() { return renderMode; },
   get mode() { return mode; },
   get lastGesture() { return lastGesture; },
   strokes: () => pad.strokes.length,
+  particles: () => ps.count,
   latency: () => (engine ? engine.latencyMs : 0),
   pad,
+  ps,
+  setRenderMode,
   startCamera,
   startDemo,
 };
 
 // ---------- 启动 ----------
 buildSwatches();
+buildLegend();
+syncModeButtons();
+if (renderMode === "particles") {
+  const checkWrap = constrToggle.closest(".check");
+  if (checkWrap) checkWrap.classList.add("hidden"); // 粒子模式 HUD 常开
+  particleLoop();
+}
+
 const params = new URLSearchParams(location.search);
 if (params.get("demo") === "1") {
   startDemo();

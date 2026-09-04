@@ -18,9 +18,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 8124;
 const BASE = `http://localhost:${PORT}`;
 const DURATION_MS = 15500;   // 演示时间轴 15.5s
-const FPS = 10;
-const FRAME_MS = 1000 / FPS;
-const OUT_W = 792, OUT_H = 504; // 输出 GIF 尺寸（源视口 1100x700）
+const FRAME_MS = 125;        // 目标帧间隔（截图耗时可能更长，按实际时间戳补偿）
+const OUT_W = 792, OUT_H = 503; // 输出 GIF 尺寸（源视口 900x572）
 
 const server = spawn(process.execPath, ["scripts/serve.js", String(PORT)], { cwd: root, stdio: "ignore" });
 await new Promise((r) => setTimeout(r, 1200));
@@ -31,24 +30,23 @@ const browser = await chromium.launch({
   args: ["--use-angle=swiftshader", "--disable-gpu-sandbox"],
 });
 
-const page = await browser.newPage({ viewport: { width: 1100, height: 700 } });
+const page = await browser.newPage({ viewport: { width: 900, height: 572 } });
 await page.goto(`${BASE}/?demo=1`);
-await page.waitForFunction(() => window.__app && window.__app.strokes() > 0, { timeout: 20000 });
+await page.waitForFunction(() => window.__app && window.__app.particles() > 80, { timeout: 20000 });
 
 console.log("开始录制…");
-const frames = [];
+const frames = []; // {buf, t}
 const t0 = Date.now();
-let shotIndex = 0;
 const shotAt = [
-  { t: 2200, name: "demo-draw-star.png" },      // 画五角星（黑）
-  { t: 6300, name: "demo-heart-construction.png" }, // 构造线 + 红心
+  { t: 2200, name: "demo-draw-star.png" },      // 画五角星（粒子流）
+  { t: 6300, name: "demo-heart-construction.png" }, // 构造线 + 红心粒子流
   { t: 11000, name: "demo-wave-bold.png" },     // 粗笔波浪线
   { t: 13600, name: "demo-after-clear.png" },   // 清空后
 ];
 
 while (Date.now() - t0 < DURATION_MS) {
   const elapsed = Date.now() - t0;
-  frames.push(await page.screenshot({ clip: { x: 0, y: 0, width: 1100, height: 700 } }));
+  frames.push({ buf: await page.screenshot({ clip: { x: 0, y: 0, width: 900, height: 572 } }), t: Date.now() - t0 });
   const hit = shotAt.find((s) => elapsed >= s.t && !s.done);
   if (hit) {
     hit.done = true;
@@ -81,15 +79,19 @@ const downscale = (buf) => {
 const gif = GIFEncoder();
 let palette = null;
 for (let i = 0; i < total; i++) {
-  const rgba = downscale(frames[i]);
+  const rgba = downscale(frames[i].buf);
   if (!palette) palette = quantize(rgba, 128);
   const index = applyPalette(rgba, palette);
-  gif.writeFrame(index, OUT_W, OUT_H, { palette, delay: Math.round(FRAME_MS * 10) });
+  // 帧延时 = 相邻两帧的真实时间差（GIF 帧延时单位是毫秒），保证 GIF 与真实时间同步
+  const nextT = i + 1 < total ? frames[i + 1].t : frames[i].t + FRAME_MS;
+  const delay = Math.max(40, Math.min(400, nextT - frames[i].t));
+  gif.writeFrame(index, OUT_W, OUT_H, { palette, delay });
 }
 gif.finish();
 const gifPath = path.join(root, "assets", "demo.gif");
 fs.writeFileSync(gifPath, gif.bytes());
-console.log(`GIF 完成：${gifPath} (${(gif.bytes().length / 1024 / 1024).toFixed(2)} MB, ${total} 帧, ${(total * FRAME_MS / 1000).toFixed(1)}s)`);
+const durSec = (frames[total - 1].t - frames[0].t + FRAME_MS) / 1000;
+console.log(`GIF 完成：${gifPath} (${(gif.bytes().length / 1024 / 1024).toFixed(2)} MB, ${total} 帧, ~${durSec.toFixed(1)}s)`);
 
 await browser.close();
 server.kill();

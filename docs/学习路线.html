@@ -170,7 +170,7 @@
       <div class="arrow">--&gt;</div>
       <div class="node"><div class="t">手势识别</div><div class="d">21 个关键点 + 手势名</div></div>
       <div class="arrow">--&gt;</div>
-      <div class="node"><div class="t">画笔交互</div><div class="d">笔迹 · 颜色 · 构造线</div></div>
+      <div class="node"><div class="t">粒子/笔迹</div><div class="d">粒子效果 · 霓虹笔迹</div></div>
     </div>
     <p>对应到文件：<code>gestures.js</code> 管前两段，<code>sketch.js</code> 和 <code>app.js</code> 管最后一段。所有"可以随便改"的参数，都集中在 <code>config.js</code> 一个文件里。</p>
   </section>
@@ -200,7 +200,7 @@ node scripts/serve.js</code></pre>
     <p>浏览器打开 <code>http://localhost:8000</code>：</p>
     <ol class="steps">
       <li>弹出摄像头授权 → 点<strong>"允许"</strong>。右上角状态灯变绿、显示"已就绪"。</li>
-      <li>手伸到镜头前 30–60cm，<em class="tech">张开手掌</em>——移动手，画布上出现霓虹笔迹。</li>
+      <li>手伸到镜头前 30–60cm，<em class="tech">张开手掌</em>——移动手，指尖拖出发光粒子流（默认粒子模式；点"笔迹模式"可切回画笔）。</li>
       <li>试试其他手势：握拳换颜色、食指上指开构造线、剪刀手换笔刷、点赞清空。</li>
       <li>没有摄像头？点右侧"演示模式"，一只虚拟手会自动表演全部交互。</li>
     </ol>
@@ -211,17 +211,19 @@ node scripts/serve.js</code></pre>
   </section>
 
   <section id="s3">
-    <div class="sec-head"><span class="sec-no">03</span><h2>读懂代码：只需要看 4 个文件</h2></div>
+    <div class="sec-head"><span class="sec-no">03</span><h2>读懂代码：看懂 5 个核心文件</h2></div>
     <hr class="sec-rule">
     <p>每个文件只干一件事——这是好项目的通例，也是你能快速上手的理由：</p>
     <table>
       <tr><th>文件</th><th>你要理解的一件事</th></tr>
-      <tr><td><code>js/config.js</code></td><td>所有"可调参数"集中在这：颜色、笔刷、平滑、阈值。改这里 = 改行为</td></tr>
-      <tr><td><code>js/app.js</code></td><td><code>onGesture()</code> 里的 switch——"手势名 → 具体动作"的翻译器</td></tr>
+      <tr><td><code>js/config.js</code></td><td>所有"可调参数"集中在这：颜色、笔刷、平滑、阈值、粒子数量。改这里 = 改行为</td></tr>
+      <tr><td><code>js/effects.js</code></td><td><strong>手势→粒子效果注册表</strong>：一个条目 = 一种手势的效果，加新效果就加条目</td></tr>
+      <tr><td><code>js/particles.js</code></td><td>粒子池、力场（引力/涡流/掌风）与辉光拖影渲染</td></tr>
+      <tr><td><code>js/app.js</code></td><td>模式切换；笔迹模式动作在 <code>onGesture()</code>，粒子模式在 <code>particleFrame()</code> 走注册表</td></tr>
       <tr><td><code>js/gestures.js</code></td><td><code>recognizeForVideo()</code> 每帧调一次，吐出 21 个关键点 + 手势名</td></tr>
-      <tr><td><code>js/sketch.js</code></td><td><code>begin() / addPoint() / end()</code>——一笔的生命周期</td></tr>
+      <tr><td><code>js/sketch.js</code></td><td>笔迹模式：<code>begin() / addPoint() / end()</code>——一笔的生命周期</td></tr>
     </table>
-    <p>推荐阅读顺序：<code>config.js</code> → <code>app.js</code> 的 <code>onGesture</code> → <code>gestures.js</code> 的 <code>_handle</code> → <code>sketch.js</code> 的 <code>render</code>。</p>
+    <p>推荐阅读顺序：<code>config.js</code> → <code>effects.js</code>（注册表）→ <code>app.js</code> 的 <code>particleFrame</code> → <code>particles.js</code> 的 <code>update</code> → <code>gestures.js</code> 的 <code>_handle</code>。</p>
     <p>两个值得停下来想 1 分钟的细节：</p>
     <p><strong>防抖</strong>——<code>stableFrames: 3</code> 表示"连续 3 帧识别到同一手势才生效"。没有它，手势会在握拳/张开之间闪烁，颜色会连跳好几次。<br>
     <strong>平滑</strong>——<code>smoothing: 0.55</code> 是指数平滑，让笔迹跟手又不抖成筛糠。这两个参数就是手势交互"手感"的全部秘密。</p>
@@ -256,7 +258,7 @@ git commit -m "feat: 换上我的画笔配色"
 git push</code></pre></li>
       <li>一分钟后打开你的仓库页面，点最近一次提交，应能看到这行改动；GitHub Pages 上的在线版本也会自动同步。</li>
     </ol>
-    <div class="note"><b>完成标志</b>：GitHub 仓库的 commit 列表里，出现一条你自己写的提交。这就是你在 vibecoding 世界里的第一个签名。</div>
+    <div class="note"><b>完成标志</b>：GitHub 仓库的 commit 列表里，出现一条你自己写的提交。这就是你在 vibecoding 世界里的第一个签名。进阶任务：打开 <code>js/effects.js</code>，仿照「能量爆发」改出一个你自己的粒子效果（文件头有三步指南），保存刷新立刻可见。</div>
   </section>
 
   <section id="s6">
@@ -265,7 +267,7 @@ git push</code></pre></li>
     <p>数据流你已经全部掌握了，接下来只换"交互翻译器"就能做出完全不同的东西：</p>
     <table>
       <tr><th>方向</th><th>怎么起步</th></tr>
-      <tr><td>新增手势</td><td>给 <code>onGesture</code> 加一个 <code>ILoveYou</code> case（recognizer 自带这个类别），触发时自动画一颗星</td></tr>
+      <tr><td>新增手势</td><td>在 <code>js/effects.js</code> 给 <code>ILoveYou</code> 手势加一个专属粒子效果（recognizer 自带这个类别，注册表加个条目就行）</td></tr>
       <tr><td>双手绘制</td><td>把 <code>gestures.js</code> 里 <code>numHands: 1</code> 改成 2，看看会发生什么</td></tr>
       <tr><td>音乐画布</td><td>接 Web Audio API，用音量控制笔刷粗细——数据流不变</td></tr>
       <tr><td>自己的模型</td><td>MediaPipe 支持自定义手势模型；先用 Teachable Machine 体验思路</td></tr>

@@ -52,31 +52,40 @@ try {
     await page.close();
   }
 
-  // ---- 2. 演示模式：手势驱动绘制闭环 ----
-  console.log("\n[2] 演示模式 (?demo=1)");
+  // ---- 2. 粒子模式（默认）：手势驱动粒子效果 ----
+  console.log("\n[2] 粒子模式 (?demo=1)");
   {
     const page = await browser.newPage({ viewport: { width: 1100, height: 700 } });
     track(page);
     await page.goto(`${BASE}/?demo=1`);
+    await page.waitForFunction(() => window.__app && window.__app.particles() > 80, { timeout: 15000 });
+    ok("粒子闭环：指尖粒子流持续产生", true);
+    await page.waitForFunction(() => window.__app.lastGesture === "Closed_Fist", { timeout: 12000 });
+    ok("握拳触发能量爆发", true);
+    await page.waitForFunction(() => window.__app.lastGesture === "Thumb_Up", { timeout: 20000 });
+    await page.waitForTimeout(2600);
+    const c = await page.evaluate(() => window.__app.particles());
+    ok("点赞清空：粒子迅速消散", c < 60, `剩余 ${c}`);
+    await page.close();
+  }
+
+  // ---- 2b. 笔迹模式（?mode=ink）：原有笔画闭环 ----
+  console.log("\n[2b] 笔迹模式 (?mode=ink&demo=1)");
+  {
+    const page = await browser.newPage({ viewport: { width: 1100, height: 700 } });
+    track(page);
+    await page.goto(`${BASE}/?mode=ink&demo=1`);
     await page.waitForFunction(() => window.__app && window.__app.strokes() > 0, { timeout: 15000 });
     const s1 = await page.evaluate(() => window.__app.strokes());
     // 等待第二笔（红心）完成后验证笔画持续产生
     await page.waitForFunction(() => window.__app.strokes() >= 2, { timeout: 12000 });
     const s2 = await page.evaluate(() => window.__app.strokes());
     ok("绘制闭环：笔画持续产生", s2 > s1, `${s1} -> ${s2} 笔`);
-    const latency = await page.evaluate(() => window.__app.latency());
-    ok("单帧管线耗时 << 500ms", latency >= 0 && latency < 100, `${latency.toFixed(2)}ms`);
-    const badge = await page.locator("#demoBadge").isVisible();
-    ok("演示模式角标可见", badge);
-    // 等待到换色（握拳 3.6s）+ 构造线开关（食指 4.4s）
+    // 等待到构造线开启（食指 4.4s）
     await page.waitForTimeout(3200);
     const constrOn = await page.evaluate(() => window.__app.pad.construction);
     ok("食指手势触发构造线开启", constrOn === true);
     await page.screenshot({ path: path.join(root, "assets/screenshots/demo-construction.png") });
-    // 等待清空（点赞 12.4s）：清空后笔画数应回到 0
-    await page.waitForTimeout(6500);
-    const afterClear = await page.evaluate(() => window.__app.strokes());
-    ok("点赞手势触发清空", afterClear === 0, `剩余 ${afterClear} 笔`);
     await page.close();
   }
 

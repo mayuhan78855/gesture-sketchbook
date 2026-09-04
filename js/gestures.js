@@ -6,7 +6,8 @@
 // ============================================================
 
 import { CONFIG, GESTURE_INFO } from "./config.js";
-import { FilesetResolver, GestureRecognizer } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+// MediaPipe 识别库不在这里静态导入——改为开摄像头时懒加载（见 start()），
+// 这样演示模式/粒子模式在断网环境下也能正常运行，不依赖 CDN。
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -83,14 +84,16 @@ export class GestureEngine {
     await this.video.play().catch(() => {});
     this.cb.onStatus("摄像头已开启，正在加载识别模型…", "loading");
 
-    // ---- 2. 加载 MediaPipe 模型（GPU 失败自动降级 CPU）----
+    // ---- 2. 加载 MediaPipe 模型（懒加载 CDN 库；GPU 失败自动降级 CPU）----
     try {
-      const vision = await FilesetResolver.forVisionTasks(CONFIG.wasmCDN);
-      this.recognizer = await this._create(vision, "GPU");
+      const lib = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
+      const vision = await lib.FilesetResolver.forVisionTasks(CONFIG.wasmCDN);
+      this.recognizer = await this._create(lib, vision, "GPU");
     } catch (e) {
       try {
-        const vision = await FilesetResolver.forVisionTasks(CONFIG.wasmCDN);
-        this.recognizer = await this._create(vision, "CPU");
+        const lib = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
+        const vision = await lib.FilesetResolver.forVisionTasks(CONFIG.wasmCDN);
+        this.recognizer = await this._create(lib, vision, "CPU");
       } catch (e2) {
         this.cb.onError({
           title: "手势识别模型加载失败",
@@ -108,8 +111,8 @@ export class GestureEngine {
     return true;
   }
 
-  _create(vision, delegate) {
-    return GestureRecognizer.createFromOptions(vision, {
+  _create(lib, vision, delegate) {
+    return lib.GestureRecognizer.createFromOptions(vision, {
       baseOptions: { modelAssetPath: CONFIG.modelURL, delegate },
       runningMode: "VIDEO",
       numHands: 1,

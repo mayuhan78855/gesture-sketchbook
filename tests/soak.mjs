@@ -24,19 +24,19 @@ page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
 page.on("pageerror", (e) => errors.push(String(e)));
 
 await page.goto(`${BASE}/?demo=1`);
-await page.waitForFunction(() => window.__app && window.__app.strokes() > 0, { timeout: 15000 });
+await page.waitForFunction(() => window.__app && window.__app.particles() > 80, { timeout: 15000 });
 
 console.log("5 分钟稳定性测试开始（30s × 10 次采样）…");
 const samples = [];
 for (let i = 1; i <= 10; i++) {
   await page.waitForTimeout(30000);
   const d = await page.evaluate(() => ({
-    strokes: window.__app.strokes(),
+    particles: window.__app.particles(),
     latency: window.__app.latency(),
     mode: window.__app.mode,
   }));
   samples.push({ t: i * 30, ...d });
-  console.log(`  +${i * 30}s  strokes=${d.strokes}  latency=${d.latency.toFixed(1)}ms  mode=${d.mode}  errors=${errors.length}`);
+  console.log(`  +${i * 30}s  particles=${d.particles}  latency=${d.latency.toFixed(1)}ms  mode=${d.mode}  errors=${errors.length}`);
 }
 const crashed = errors.length > 0;
 const alive = await page.evaluate(() => window.__app.mode === "demo" || window.__app.mode === "camera" || window.__app.mode === "paper");
