@@ -243,6 +243,7 @@ async function enterSpace() {
       renderMode = "particles";
       syncModeButtons(); buildLegend();
       pad._resize(); ps._resize(); particleLoop();
+      applyModeVisuals();
       return;
     }
   }
@@ -310,6 +311,7 @@ async function enterGalaxy() {
       renderMode = "particles";
       syncModeButtons(); buildLegend();
       pad._resize(); ps._resize(); particleLoop();
+      applyModeVisuals();
       return;
     }
   }
@@ -340,6 +342,21 @@ function inkFrame(f) {
   if (pad.dirty) pad.render();
 }
 
+// ---------- 背景与模式视觉 ----------
+function syncCamBg() {
+  const bg = $("#camBg");
+  const on = renderMode === "particles" && mode === "camera" && video.srcObject;
+  bg.classList.toggle("hidden", !on);
+  if (on) bg.srcObject = video.srcObject; // 摄像头画面作粒子/花朵背景（仅本地）
+}
+
+function applyModeVisuals() {
+  const space = renderMode === "space3d" || renderMode === "galaxy";
+  document.body.classList.toggle("space-mode", space); // 银河/星环：纯黑沉浸背景
+  document.querySelector(".paper-wrap").classList.toggle("space-bg", space);
+  syncCamBg();
+}
+
 // ---------- 统一帧入口 ----------
 function onFrame(f) {
   if (renderMode === "particles") particleFrame(f);
@@ -350,7 +367,7 @@ function onFrame(f) {
 
 // ---------- 一次性手势事件（笔迹模式的动作在这里；粒子模式走注册表） ----------
 function onGesture(g) {
-  if (renderMode === "particles") return; // 粒子模式在 particleFrame 里分发，不能提前改 lastGesture
+  if (renderMode !== "ink") return; // 粒子/星环/银河各自在帧循环里分发，不能提前改 lastGesture
   lastGesture = g;
 
   switch (g) {
@@ -401,6 +418,7 @@ function setRenderMode(m) {
   else if (m === "ink") { pad._resize(); pad.dirty = true; showToast("笔迹模式"); }
   else if (m === "space3d") { enterSpace().then(() => showToast("3D 星环模式")); }
   else if (m === "galaxy") { enterGalaxy().then(() => showToast("银河星旅模式")); }
+  applyModeVisuals();
 }
 
 function syncModeButtons() {
@@ -419,6 +437,7 @@ async function startCamera() {
   camStatus.textContent = "请求权限中…";
   const ok = await engineStart();
   if (!ok) mode = "paper";
+  applyModeVisuals();
 }
 
 async function engineStart() {
@@ -438,6 +457,7 @@ function startDemo() {
   mode = "demo";
   demoBadge.classList.remove("hidden");
   setStatus("演示模式运行中", "demo");
+  applyModeVisuals();
   import("./demo.js").then(({ DemoHand }) => {
     demo = new DemoHand({ onFrame, onGesture });
     // 3D 模式下等引擎就绪再开始走时间轴（其他模式渲染即就绪）
@@ -567,6 +587,7 @@ if (renderMode === "particles") {
 } else if (renderMode === "galaxy") {
   enterGalaxy();
 }
+applyModeVisuals();
 
 const params = new URLSearchParams(location.search);
 if (params.get("demo") === "1") {

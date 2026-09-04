@@ -148,8 +148,9 @@ export class ParticleSystem {
    */
   render(hud) {
     const tctx = this.trail.getContext("2d");
-    tctx.globalCompositeOperation = "source-over";
-    tctx.fillStyle = `rgba(7, 11, 18, ${CONFIG.particles.trailFade})`;
+    // 擦除式拖影：不涂黑而是让拖影层渐隐，这样底层摄像头画面可以透出来
+    tctx.globalCompositeOperation = "destination-out";
+    tctx.fillStyle = `rgba(0, 0, 0, ${CONFIG.particles.trailFade})`;
     tctx.fillRect(0, 0, this.w, this.h);
 
     tctx.globalCompositeOperation = "lighter";
