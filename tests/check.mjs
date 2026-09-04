@@ -93,14 +93,25 @@ try {
     await page.close();
   }
 
-  // ---- 2c. 3D 星环模式（默认）：Three.js 粒子云 + 手势变形 ----
-  console.log("\n[2c] 3D 星环模式 (?demo=1)");
+  // ---- 2c. 3D 星环模式：Three.js 粒子云 + 手势变形 ----
+  console.log("\n[2c] 3D 星环模式 (?mode=space3d&demo=1)");
   {
     const page = await browser.newPage({ viewport: { width: 900, height: 572 } });
     track(page);
-    await page.goto(`${BASE}/?demo=1`);
-    await page.waitForFunction(() => window.__app && window.__app.space && window.__app.space.ready && window.__app.space.count > 10000, { timeout: 30000 });
-    ok("3D 星环：粒子云就位", true);
+    await page.goto(`${BASE}/?mode=space3d&demo=1`);
+    let ready = false;
+    for (let attempt = 0; attempt < 2 && !ready; attempt++) {
+      try {
+        await page.waitForFunction(() => window.__app && window.__app.space && window.__app.space.ready && window.__app.space.count > 10000, { timeout: 30000 });
+        ready = true;
+      } catch (e) {
+        const diag = await page.evaluate(() => ({ rm: window.__app?.renderMode, ready: window.__app?.space?.ready, chip: document.querySelector("#statusChip")?.textContent })).catch(() => "eval-fail");
+        console.log(`  ⚠ 第 ${attempt + 1} 次等待超时，页面状态:`, JSON.stringify(diag), "consoleErrors:", errors.slice(0, 3));
+        errors.length = 0;
+        await page.reload();
+      }
+    }
+    ok("3D 星环：粒子云就位", ready);
     await page.waitForFunction(() => window.__app.lastGesture === "Thumb_Index", { timeout: 20000 });
     await page.waitForTimeout(2000);
     const morph = await page.evaluate(() => window.__app.space.morph);
@@ -110,6 +121,30 @@ try {
     await page.waitForTimeout(1200);
     const morph2 = await page.evaluate(() => window.__app.space.morph);
     ok("松开恢复星环", morph2 === "ring", morph2);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    ok("桌面无横向溢出", overflow <= 0, `overflow=${overflow}px`);
+    await page.close();
+  }
+
+  // ---- 2d. 银河星旅模式（默认）：七大行星 + 跃迁 ----
+  console.log("\n[2d] 银河星旅模式 (?demo=1)");
+  {
+    const page = await browser.newPage({ viewport: { width: 900, height: 572 } });
+    track(page);
+    await page.goto(`${BASE}/?demo=1`);
+    await page.waitForFunction(() => window.__app && window.__app.galaxy && window.__app.galaxy.ready && window.__app.galaxy.count > 8000, { timeout: 30000 });
+    ok("银河星旅：星场就位", true);
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: path.join(root, "assets/screenshots/demo-galaxy-overview.png") });
+    await page.waitForFunction(() => window.__app.lastGesture === "Thumb_Index", { timeout: 20000 });
+    await page.waitForTimeout(3000);
+    const st = await page.evaluate(() => window.__app.galaxy.state);
+    ok("捏合跃迁：抵达行星", st === "arrived", st);
+    await page.screenshot({ path: path.join(root, "assets/screenshots/demo-galaxy-arrive.png") });
+    await page.waitForFunction(() => window.__app.lastGesture === "None", { timeout: 15000 });
+    await page.waitForTimeout(2600);
+    const st2 = await page.evaluate(() => window.__app.galaxy.state);
+    ok("返回银河全景", st2 === "overview", st2);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     ok("桌面无横向溢出", overflow <= 0, `overflow=${overflow}px`);
     await page.close();

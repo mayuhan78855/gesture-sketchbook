@@ -32,7 +32,7 @@ const browser = await chromium.launch({
 
 const page = await browser.newPage({ viewport: { width: 900, height: 572 } });
 await page.goto(`${BASE}/?demo=1`);
-await page.waitForFunction(() => window.__app && window.__app.space && window.__app.space.ready, { timeout: 30000 });
+await page.waitForFunction(() => window.__app && window.__app.galaxy && window.__app.galaxy.ready, { timeout: 30000 });
 // 与演示时间轴对齐（Three.js 加载耗会使时间轴错开，这里等到一圈开头再开拍）
 await page.waitForFunction(() => window.__app.demoT() >= 0.1 && window.__app.demoT() <= 0.4, { timeout: 40000 });
 const t0 = Date.now() - (await page.evaluate(() => window.__app.demoT())) * 1000;
@@ -40,10 +40,10 @@ const t0 = Date.now() - (await page.evaluate(() => window.__app.demoT())) * 1000
 console.log("开始录制…");
 const frames = []; // {buf, t}
 const shotAt = [
-  { t: 2600, name: "demo-space-ring.png" },     // 星环 + 手掌视角跟随
-  { t: 6800, name: "demo-space-orbit.png" },    // 环绕视角
-  { t: 12600, name: "demo-space-sphere.png" },  // 捏合聚合成星球
-  { t: 15900, name: "demo-after-clear.png" },   // 超新星/还原后
+  { t: 2600, name: "demo-galaxy-overview.png" },  // 银河全景 + 行星标签
+  { t: 10800, name: "demo-galaxy-travel.png" },   // 跃迁飞行中
+  { t: 11900, name: "demo-galaxy-arrive.png" },   // 抵达行星特写
+  { t: 15900, name: "demo-after-clear.png" },     // 返回全景后
 ];
 
 while (Date.now() - t0 < DURATION_MS) {

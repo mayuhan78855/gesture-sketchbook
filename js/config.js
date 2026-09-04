@@ -53,6 +53,12 @@ export const CONFIG = {
     baseSpin: 0.5,       // 基础自旋速度（手掌挥动可加成 3 倍）
   },
 
+  // ---------- 银河星旅（Three.js 模式）----------
+  galaxy: {
+    stars: 9000,         // 银河背景星数（低配电脑调低到 5000）
+    travelDur: 2.2,      // 跃迁飞行时长（秒）
+  },
+
   // MediaPipe 资源地址（首次打开需联网下载模型，之后浏览器会缓存）
   wasmCDN: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
   modelURL: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",

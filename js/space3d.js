@@ -12,6 +12,15 @@
 
 import { CONFIG } from "./config.js";
 
+// Three.js 加载：本地 vendor 优先（随仓库部署，离线可用），CDN 兑底
+async function loadTHREE() {
+  let lastErr;
+  for (const src of ["../vendor/three.module.js", "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "https://unpkg.com/three@0.160.0/build/three.module.js"]) {
+    try { return await import(src); } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 export class Space3D {
@@ -28,7 +37,7 @@ export class Space3D {
   }
 
   async init() {
-    const THREE = await import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js");
+    const THREE = await loadTHREE();
     const S = CONFIG.space;
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true });

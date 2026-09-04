@@ -170,7 +170,7 @@
       <div class="arrow">--&gt;</div>
       <div class="node"><div class="t">手势识别</div><div class="d">21 个关键点 + 手势名</div></div>
       <div class="arrow">--&gt;</div>
-      <div class="node"><div class="t">3D/粒子/笔迹</div><div class="d">星环 · 粒子 · 霓虹笔迹</div></div>
+      <div class="node"><div class="t">银河/星环/粒子</div><div class="d">银河 · 星环 · 粒子 · 霓虹笔迹</div></div>
     </div>
     <p>对应到文件：<code>gestures.js</code> 管前两段，<code>sketch.js</code> 和 <code>app.js</code> 管最后一段。所有"可以随便改"的参数，都集中在 <code>config.js</code> 一个文件里。</p>
   </section>
@@ -200,7 +200,7 @@ node scripts/serve.js</code></pre>
     <p>浏览器打开 <code>http://localhost:8000</code>：</p>
     <ol class="steps">
       <li>弹出摄像头授权 → 点<strong>"允许"</strong>。右上角状态灯变绿、显示"已就绪"。</li>
-      <li>手伸到镜头前 30–60cm，<em class="tech">张开手掌</em>——默认 3D 星环模式：挥动手掌，星环随你旋转加速；捏合聚合成星球；侧栏可切换粒子/笔迹模式。</li>
+      <li>手伸到镜头前 30–60cm，<em class="tech">张开手掌</em>——默认银河星旅模式：移动手掌选中行星，捏合跃迁过去，再捏合返回全景；侧栏还有星环/粒子/笔迹模式。</li>
       <li>试试其他手势：握拳换颜色、食指上指开构造线、剪刀手换笔刷、点赞清空。</li>
       <li>没有摄像头？点右侧"演示模式"，一只虚拟手会自动表演全部交互。</li>
     </ol>
@@ -217,6 +217,7 @@ node scripts/serve.js</code></pre>
     <table>
       <tr><th>文件</th><th>你要理解的一件事</th></tr>
       <tr><td><code>js/config.js</code></td><td>所有"可调参数"集中在这：颜色、笔刷、平滑、阈值、粒子与星环数量。改这里 = 改行为</td></tr>
+      <tr><td><code>js/galaxy.js</code></td><td>银河星旅：螺旋星系背景、七大行星、光标选择与跃迁</td></tr>
       <tr><td><code>js/space3d.js</code></td><td>3D 星环模式：Three.js 粒子云、相机跟随、聚合/分裂/超新星</td></tr>
       <tr><td><code>js/effects.js</code></td><td><strong>手势→粒子效果注册表</strong>：一个条目 = 一种手势的效果，加新效果就加条目</td></tr>
       <tr><td><code>js/particles.js</code></td><td>粒子池、力场（引力/涡流/掌风）与辉光拖影渲染</td></tr>

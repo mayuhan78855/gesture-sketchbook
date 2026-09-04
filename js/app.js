@@ -29,7 +29,7 @@ const pad = new SketchPad(canvas);
 const ps = new ParticleSystem(canvas);
 
 const modeParam = new URLSearchParams(location.search).get("mode");
-let renderMode = modeParam === "ink" ? "ink" : modeParam === "particles" ? "particles" : "space3d"; // 默认 3D 星环
+let renderMode = modeParam === "ink" ? "ink" : modeParam === "particles" ? "particles" : modeParam === "space3d" ? "space3d" : "galaxy"; // 默认银河星旅
 let engine = null;
 let demo = null;
 let mode = "paper"; // 运行状态：paper | camera | demo
@@ -247,7 +247,75 @@ async function enterSpace() {
     }
   }
   space3d._resize();
+  if (demo) demo.hold = false; // 引擎就绪，时间轴开走
   spaceLoop();
+}
+
+// ---------- 银河星旅模式 ----------
+let galaxy = null;
+
+function galaxyFrame(f) {
+  lastHand = computeHand(f);
+  lastGesture = f.gesture;
+}
+
+function galaxyLoop() {
+  if (renderMode !== "galaxy" || !galaxy) return;
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - (loopT || now)) / 1000);
+  loopT = now;
+  galaxy.update(dt, lastHand, lastGesture);
+  galaxy.render();
+  // HUD：手部骨架 + 行星标签（投影自 3D 世界）
+  pad.ctx.clearRect(0, 0, pad.w, pad.h);
+  if (lastHand) drawHud(pad.ctx, lastHand);
+  if (galaxy.labels && galaxy.vw) {
+    const lc = pad.ctx;
+    lc.font = '12px Consolas, "Cascadia Code", monospace';
+    lc.lineWidth = 1.4;
+    for (const l of galaxy.labels) {
+      if (!l.visible) continue;
+      const sel = l.selected;
+      const c = sel ? "rgba(255, 180, 84, .95)" : "rgba(45, 216, 255, .8)";
+      lc.strokeStyle = c; lc.fillStyle = c;
+      lc.beginPath();
+      lc.moveTo(l.x, l.y - 6); lc.lineTo(l.x + 6, l.y); lc.lineTo(l.x, l.y + 6); lc.lineTo(l.x - 6, l.y);
+      lc.closePath(); lc.stroke();
+      lc.fillText(sel ? `${l.name} ${l.en} ▶` : l.name, l.x + 11, l.y + 4);
+      if (sel && galaxy.state === "arrived") {
+        lc.fillText(l.blurb, l.x + 11, l.y + 22);
+      }
+    }
+  }
+  hint.classList.toggle("hidden", !!lastHand);
+  if (++frameTick % 30 === 0) {
+    const arrived = galaxy.state === "arrived" && galaxy._arrivedPlanet;
+    camStatus.textContent = arrived ? `ARRIVED · ${galaxy._arrivedPlanet.en}` : `MILKY WAY · ${galaxy.count} STARS`;
+  }
+  _raf = requestAnimationFrame(galaxyLoop);
+}
+
+async function enterGalaxy() {
+  $("#galaxy").classList.remove("hidden");
+  if (!galaxy) {
+    setStatus("正在加载 3D 引擎…", "loading");
+    try {
+      const { Galaxy3D } = await import("./galaxy.js");
+      galaxy = new Galaxy3D($("#galaxy"));
+      await galaxy.init();
+    } catch (e) {
+      $("#galaxy").classList.add("hidden");
+      setStatus("3D 引擎加载失败", "err");
+      showToast("3D 引擎加载失败（Three.js 需联网），已切回粒子模式");
+      renderMode = "particles";
+      syncModeButtons(); buildLegend();
+      pad._resize(); ps._resize(); particleLoop();
+      return;
+    }
+  }
+  galaxy._resize();
+  if (demo) demo.hold = false; // 引擎就绪，时间轴开走
+  galaxyLoop();
 }
 
 // ---------- 笔迹模式：每帧入口（原有逻辑） ----------
@@ -276,6 +344,7 @@ function inkFrame(f) {
 function onFrame(f) {
   if (renderMode === "particles") particleFrame(f);
   else if (renderMode === "space3d") spaceFrame(f);
+  else if (renderMode === "galaxy") galaxyFrame(f);
   else inkFrame(f);
 }
 
@@ -321,17 +390,21 @@ function setRenderMode(m) {
   ps.vortices.length = 0;
   lastGesture = "None";
   prevPalm = null;
+  if (demo && m !== "space3d" && m !== "galaxy") demo.hold = false; // 离开 3D 模式时解除时间轴暂停
   const checkWrap = constrToggle.closest(".check");
   if (checkWrap) checkWrap.classList.toggle("hidden", m !== "ink");
   $("#space").classList.toggle("hidden", m !== "space3d");
+  $("#galaxy").classList.toggle("hidden", m !== "galaxy");
   buildLegend();
   syncModeButtons();
   if (m === "particles") { pad._resize(); ps._resize(); particleLoop(); showToast("粒子模式"); }
   else if (m === "ink") { pad._resize(); pad.dirty = true; showToast("笔迹模式"); }
   else if (m === "space3d") { enterSpace().then(() => showToast("3D 星环模式")); }
+  else if (m === "galaxy") { enterGalaxy().then(() => showToast("银河星旅模式")); }
 }
 
 function syncModeButtons() {
+  $("#btnModeGalaxy").classList.toggle("ghost", renderMode !== "galaxy");
   $("#btnModeSpace").classList.toggle("ghost", renderMode !== "space3d");
   $("#btnModeParticles").classList.toggle("ghost", renderMode !== "particles");
   $("#btnModeInk").classList.toggle("ghost", renderMode !== "ink");
@@ -367,6 +440,8 @@ function startDemo() {
   setStatus("演示模式运行中", "demo");
   import("./demo.js").then(({ DemoHand }) => {
     demo = new DemoHand({ onFrame, onGesture });
+    // 3D 模式下等引擎就绪再开始走时间轴（其他模式渲染即就绪）
+    demo.hold = renderMode === "space3d" || renderMode === "galaxy";
     demo.start();
   }).catch(() => setStatus("演示加载失败", "err"));
 }
@@ -401,7 +476,17 @@ function buildSwatches() {
 function buildLegend() {
   legendEl.innerHTML = "";
   let items;
-  if (renderMode === "space3d") {
+  if (renderMode === "galaxy") {
+    items = [
+      { glyph: GLYPHS.Open_Palm, text: "张开手掌 · 光标悬停选择行星" },
+      { glyph: GLYPHS.Thumb_Index, text: "捏合 · 跃迁到选中的行星" },
+      { glyph: GLYPHS.Thumb_Index, text: "到达后再捏合 · 返回银河全景" },
+      { glyph: GLYPHS.Thumb_Up, text: "点赞 · 直接返回全景" },
+      { glyph: GLYPHS.Closed_Fist, text: "握拳 · 银河旋转加速" },
+      { glyph: GLYPHS.Victory, text: "剪刀手 · 时间迟缓" },
+      { glyph: GLYPHS.Pointing_Up, text: "食指上指 · 俯瞰银河旋臂" },
+    ];
+  } else if (renderMode === "space3d") {
     items = [
       { glyph: GLYPHS.Open_Palm, text: "张开手掌 · 视角跟随，挥动加速旋转" },
       { glyph: GLYPHS.Closed_Fist, text: "握拳 · 星环收缩加速" },
@@ -429,6 +514,7 @@ $("#btnClear").addEventListener("click", () => { pad.clear(); ps.killAll(0); sho
 $("#btnSave").addEventListener("click", () => pad.exportPNG());
 $("#btnDemo").addEventListener("click", startDemo);
 $("#btnCam").addEventListener("click", startCamera);
+$("#btnModeGalaxy").addEventListener("click", () => setRenderMode("galaxy"));
 $("#btnModeSpace").addEventListener("click", () => setRenderMode("space3d"));
 $("#btnModeParticles").addEventListener("click", () => setRenderMode("particles"));
 $("#btnModeInk").addEventListener("click", () => setRenderMode("ink"));
@@ -456,8 +542,9 @@ window.__app = {
   get mode() { return mode; },
   get lastGesture() { return lastGesture; },
   get space() { return space3d; },
+  get galaxy() { return galaxy; },
   strokes: () => pad.strokes.length,
-  particles: () => (renderMode === "space3d" && space3d ? space3d.count : ps.count),
+  particles: () => (renderMode === "space3d" && space3d ? space3d.count : renderMode === "galaxy" && galaxy ? galaxy.count : ps.count),
   demoT: () => (demo ? demo.t : -1),
   latency: () => (engine ? engine.latencyMs : 0),
   pad,
@@ -477,6 +564,8 @@ if (renderMode === "particles") {
   particleLoop();
 } else if (renderMode === "space3d") {
   enterSpace();
+} else if (renderMode === "galaxy") {
+  enterGalaxy();
 }
 
 const params = new URLSearchParams(location.search);

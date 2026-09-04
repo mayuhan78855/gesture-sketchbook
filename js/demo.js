@@ -11,8 +11,9 @@ const SEGMENTS = [
   { t0: 4.2,  t1: 5.0,  gesture: "Pointing_Up", at: { x: 0.52, y: 0.46 } },
   { t0: 5.0,  t1: 8.2,  gesture: "Open_Palm",   path: "heart", at: { x: 0.50, y: 0.42 } },
   { t0: 8.2,  t1: 9.0,  gesture: "Victory",     at: { x: 0.50, y: 0.48 } },
-  { t0: 9.0,  t1: 14.2, gesture: "Thumb_Index", at: { x: 0.50, y: 0.46 } },
-  { t0: 14.2, t1: 16.5, gesture: "None",        at: { x: 0.5,  y: 0.5 } },
+  { t0: 9.0,  t1: 12.4, gesture: "Thumb_Index", at: { x: 0.50, y: 0.46 } },
+  { t0: 12.4, t1: 13.2, gesture: "Thumb_Up",    at: { x: 0.55, y: 0.45 } },
+  { t0: 13.2, t1: 16.5, gesture: "None",        at: { x: 0.5,  y: 0.5 } },
 ];
 
 // 手部关键点模板（单位坐标，y 向下为正在画布上的方向）
@@ -139,9 +140,11 @@ export class DemoHand {
 
   _tick() {
     const now = performance.now();
-    const dt = (now - this._prev) / 1000;
+    const dt = Math.min(0.1, (now - this._prev) / 1000);
     this._prev = now;
+    if (this.hold) return; // 3D 引擎就绪前暂停时间轴，保证与渲染同步
     this.t += dt;
+
     // 时间轴走完一圈后从头循环（末尾的“点赞”会清空画布，循环不会堆积）
     if (this.t >= SEGMENTS[SEGMENTS.length - 1].t1) {
       this.t = 0;
