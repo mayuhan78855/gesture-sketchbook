@@ -161,6 +161,8 @@ try {
       ok(`${sub} 强制模式 ${expectMode} 生效`, true);
       const modeHidden = await page.evaluate(() => { const r = document.querySelector(".mode-row"); return !r || getComputedStyle(r).display === "none"; });
       ok(`${sub} 模式切换按钮已隐藏`, modeHidden);
+      const sideGone = await page.evaluate(() => { const s = document.querySelector(".side"); return !s || getComputedStyle(s).display === "none"; });
+      ok(`${sub} 侧栏已移除（全屏沉浸）`, sideGone);
       await page.close();
     }
   }

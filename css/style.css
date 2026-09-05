@@ -136,8 +136,18 @@ body::after {
 #space, #galaxy { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 #camBg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
-/* 独立单体验页（/flower/ /galaxy/）：隐藏模式切换，聚焦单一体验 */
+/* 独立单体验页（/flower/ /galaxy/）：全屏沉浸，隐藏侧栏与模式切换 */
 body.single .mode-row { display: none; }
+body.single .topbar { position: fixed; top: 12px; left: 16px; right: 16px; padding: 0; background: transparent; border-bottom: none; z-index: 6; }
+body.single .logo { font-size: 15px; letter-spacing: .14em; }
+body.single .logo-sub { font-size: 10px; letter-spacing: .18em; }
+body.single .chip { font-size: 11px; padding: 4px 10px; background: rgba(7, 11, 18, .6); }
+body.single .stage { padding: 0; }
+body.single .paper-wrap { position: fixed; inset: 0; border: none; min-height: 100vh; }
+body.single .side { display: none; }
+body.single .foot { position: fixed; bottom: 10px; left: 0; right: 0; background: transparent; border-top: none; opacity: .55; z-index: 6; }
+.float-ctl { position: fixed; right: 16px; bottom: 42px; display: flex; gap: 8px; z-index: 6; }
+.float-ctl .btn { flex: none; background: rgba(7, 11, 18, .7); font-size: 11px; padding: 6px 12px; }
 
 /* 3D 空间模式（银河/星环）：纯黑沉浸背景，隐藏纸面网格 */
 .paper-wrap.space-bg { background: #000; border-color: rgba(45, 216, 255, .1); }

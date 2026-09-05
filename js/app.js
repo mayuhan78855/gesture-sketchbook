@@ -149,15 +149,23 @@ function particleFrame(f) {
   const hand = computeHand(f);
   lastHand = hand;
 
+  // 花朵独立页：只保留一种体验——张手花开、握拳消散，其余手势全部忽略
+  let g = f.gesture;
+  if (window.__FLOWER_ONLY) {
+    g = (g === "Open_Palm" || g === "Thumb_Index") ? "Thumb_Index"
+      : g === "Closed_Fist" ? "Thumb_Up"
+      : "None";
+  }
+
   // 效果注册表分发：进入 / 持续 / 退出
-  if (f.gesture !== lastGesture) {
+  if (g !== lastGesture) {
     const old = EFFECTS[lastGesture];
     if (old && old.onExit) old.onExit(hand, ps);
-    const cur = EFFECTS[f.gesture];
+    const cur = EFFECTS[g];
     if (cur && cur.onEnter) cur.onEnter(hand, ps);
-    lastGesture = f.gesture;
+    lastGesture = g;
   }
-  const eff = EFFECTS[f.gesture];
+  const eff = EFFECTS[g];
   if (eff && eff.onFrame && hand) eff.onFrame(hand, ps);
 }
 
@@ -175,7 +183,7 @@ function particleLoop() {
   ps.render((ctx) => { if (lastHand) drawHud(ctx, lastHand); });
 
   hint.classList.toggle("hidden", !!lastHand);
-  if (++frameTick % 30 === 0) {
+  if (camStatus && ++frameTick % 30 === 0) {
     camStatus.textContent = mode === "camera" ? `TRACKING · ${ps.count} PARTICLES` : `DEMO · ${ps.count} PARTICLES`;
   }
   _raf = requestAnimationFrame(particleLoop);
@@ -292,7 +300,7 @@ function galaxyLoop() {
     }
   }
   hint.classList.toggle("hidden", !!lastHand);
-  if (++frameTick % 30 === 0) {
+  if (camStatus && ++frameTick % 30 === 0) {
     const arrived = galaxy.state === "arrived" && galaxy._arrivedPlanet;
     camStatus.textContent = arrived ? `ARRIVED · ${galaxy._arrivedPlanet.en}` : `MILKY WAY · ${galaxy.count} STARS`;
   }
@@ -498,6 +506,7 @@ function buildSwatches() {
 }
 
 function buildLegend() {
+  if (!legendEl) return; // 独立页面没有图例栏
   legendEl.innerHTML = "";
   let items;
   if (renderMode === "galaxy") {

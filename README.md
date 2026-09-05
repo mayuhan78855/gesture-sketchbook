@@ -18,8 +18,8 @@
 
 两个体验也有独立网址，方便单独分享：
 
-- 🌸 **花朵粒子页**（摄像头人脸背景 + 花开绽放）：<https://mayuhan78855.github.io/gesture-sketchbook/flower/>
-- 🌌 **银河星旅页**（螺旋星系 + 七大行星跃迁）：<https://mayuhan78855.github.io/gesture-sketchbook/galaxy/>
+- 🌸 **花朵粒子页**（全屏沉浸：摄像头人脸背景，张手花开/握拳消散，只有一种花）：<https://mayuhan78855.github.io/gesture-sketchbook/flower/>
+- 🌌 **银河星旅页**（全屏沉浸：纯黑银河 + 七大行星本色 + 捏合跃迁）：<https://mayuhan78855.github.io/gesture-sketchbook/galaxy/>
 
 ## 手势说明
 

@@ -7,7 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='3.2' fill='none' stroke='%232dd8ff' stroke-width='1.6'/><ellipse cx='12' cy='12' rx='9' ry='3.6' fill='none' stroke='%232dd8ff' stroke-width='1.2' transform='rotate(-18 12 12)'/></svg>">
   <link rel="stylesheet" href="../css/style.css">
 </head>
-<body class="single single-galaxy">
+<body class="single single-galaxy space-mode">
   <header class="topbar">
     <h1 class="logo"><b>GALAXY</b> VOYAGE <span class="logo-sub">银河星旅 · 七大行星</span></h1>
     <div id="statusChip" class="chip" data-kind="idle">组件加载中…</div>
@@ -19,40 +19,20 @@
       <canvas id="space" class="hidden"></canvas>
       <canvas id="galaxy" class="hidden"></canvas>
       <canvas id="paper" width="900" height="560"></canvas>
-      <div id="hint" class="hint">AWAITING HAND INPUT<br><span class="cn">移动手掌选中行星 · 捏合跃迁</span></div>
+      <div id="hint" class="hint">AWAITING HAND INPUT<br><span class="cn">移动手掌选中行星 · 捏合跃迁<br>再捏合 · 返回全景</span></div>
       <div id="demoBadge" class="demo-badge hidden">演示模式 · 虚拟手</div>
       <div id="toast" class="toast hidden"></div>
     </section>
 
-    <aside class="side">
-      <div class="card view-card">
-        <div class="card-title">摄像头取景 <span class="muted">(仅本地处理)</span></div>
-        <div class="view-box">
-          <div class="nosignal">NO SIGNAL</div>
-          <video id="cam" autoplay playsinline muted></video>
-        </div>
-        <div class="card-tail" id="camStatus">未开启</div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">手势图例</div>
-        <ul class="legend"></ul>
-      </div>
-
-      <div class="card">
-        <div class="card-title">操作</div>
-        <div class="btn-row">
-          <button id="btnDemo" class="btn ghost" type="button">演示模式</button>
-          <button id="btnCam" class="btn ghost" type="button">开启摄像头</button>
-        </div>
-      </div>
-    </aside>
+    <div class="float-ctl">
+      <button id="btnDemo" class="btn" type="button">演示模式</button>
+      <button id="btnCam" class="btn" type="button">开启摄像头</button>
+    </div>
   </main>
 
   <footer class="foot">
-    摄像头画面仅在本机浏览器内分析，不会上传到任何服务器 ·
-    <a href="../flower/">花朵粒子页</a> · <a href="../index.html">完整版（四模式）</a> ·
-    <a href="https://github.com/mayuhan78855/gesture-sketchbook" target="_blank" rel="noopener">源码仓库</a>
+    摄像头画面仅在本机浏览器内分析，不会上传 ·
+    <a href="../flower/">花开绽放</a> · <a href="../index.html">完整版</a>
   </footer>
 
   <div id="errorPanel" class="error-panel hidden"></div>
