@@ -62,6 +62,7 @@ const GLYPHS = {
 
 // ---------- 小工具 ----------
 function setStatus(text, kind = "idle") {
+  if (!chip) return; // 独立页没有状态灯
   chip.textContent = text;
   chip.dataset.kind = kind;
 }
@@ -197,7 +198,7 @@ function particleLoop() {
   ps.update(dt, wind);
   ps.render((ctx) => { if (lastHand && !window.__FLOWER_ONLY) drawHud(ctx, lastHand); });
 
-  hint.classList.toggle("hidden", !!lastHand);
+  hint?.classList.toggle("hidden", !!lastHand);
   if (camStatus && ++frameTick % 30 === 0) {
     camStatus.textContent = mode === "camera" ? `TRACKING · ${ps.count} PARTICLES` : `DEMO · ${ps.count} PARTICLES`;
   }
@@ -295,9 +296,10 @@ function galaxyLoop() {
   loopT = now;
   galaxy.update(dt, lastHand, lastGesture);
   galaxy.render();
-  // HUD：手部骨架 + 行星标签（投影自 3D 世界）
+  // HUD：独立页只有行星英文标签；完整版另加手部骨架图案
   pad.ctx.clearRect(0, 0, pad.w, pad.h);
-  if (lastHand) drawHud(pad.ctx, lastHand);
+  const singleUI = document.body.classList.contains("single");
+  if (!singleUI && lastHand) drawHud(pad.ctx, lastHand);
   if (galaxy.labels && galaxy.vw) {
     const lc = pad.ctx;
     lc.font = '12px Consolas, "Cascadia Code", monospace';
@@ -305,18 +307,18 @@ function galaxyLoop() {
     for (const l of galaxy.labels) {
       if (!l.visible) continue;
       const sel = l.selected;
-      const c = sel ? "rgba(255, 180, 84, .95)" : "rgba(45, 216, 255, .8)";
+      const c = sel ? "rgba(255, 180, 84, .95)" : "rgba(45, 216, 255, .5)";
       lc.strokeStyle = c; lc.fillStyle = c;
       lc.beginPath();
-      lc.moveTo(l.x, l.y - 6); lc.lineTo(l.x + 6, l.y); lc.lineTo(l.x, l.y + 6); lc.lineTo(l.x - 6, l.y);
+      lc.moveTo(l.x, l.y - 5); lc.lineTo(l.x + 5, l.y); lc.lineTo(l.x, l.y + 5); lc.lineTo(l.x - 5, l.y);
       lc.closePath(); lc.stroke();
-      lc.fillText(sel ? `${l.name} ${l.en} ▶` : l.name, l.x + 11, l.y + 4);
-      if (sel && galaxy.state === "arrived") {
-        lc.fillText(l.blurb, l.x + 11, l.y + 22);
+      if (sel) {
+        lc.fillText(singleUI ? `${l.en} ▶` : `${l.name} ${l.en} ▶`, l.x + 10, l.y + 4);
+        if (!singleUI && galaxy.state === "arrived") lc.fillText(l.blurb, l.x + 10, l.y + 22);
       }
     }
   }
-  hint.classList.toggle("hidden", !!lastHand);
+  hint?.classList.toggle("hidden", !!lastHand);
   if (camStatus && ++frameTick % 30 === 0) {
     const arrived = galaxy.state === "arrived" && galaxy._arrivedPlanet;
     camStatus.textContent = arrived ? `ARRIVED · ${galaxy._arrivedPlanet.en}` : `MILKY WAY · ${galaxy.count} STARS`;
@@ -366,7 +368,7 @@ function inkFrame(f) {
 
   // 手在场时构造线/光标要跟着动，强制每帧重绘
   if (f.landmarks) pad.dirty = true;
-  hint.classList.toggle("hidden", !!f.landmarks);
+  hint?.classList.toggle("hidden", !!f.landmarks);
   if (pad.dirty) pad.render();
 }
 
@@ -462,7 +464,7 @@ async function startCamera() {
   mode = "camera";
   demoBadge.classList.add("hidden");
   setStatus("正在打开摄像头…", "loading");
-  camStatus.textContent = "请求权限中…";
+  camStatus && (camStatus.textContent = "请求权限中…");
   const ok = await engineStart();
   if (!ok) mode = "paper";
   applyModeVisuals();
@@ -567,7 +569,8 @@ const btnSaveEl = $("#btnSave");
 if (btnSaveEl) btnSaveEl.addEventListener("click", () => pad.exportPNG());
 const btnDemoEl = $("#btnDemo");
 if (btnDemoEl) btnDemoEl.addEventListener("click", startDemo);
-$("#btnCam").addEventListener("click", startCamera);
+const btnCamEl = $("#btnCam");
+if (btnCamEl) btnCamEl.addEventListener("click", startCamera);
 const btnModeGalaxyEl = $("#btnModeGalaxy");
 if (btnModeGalaxyEl) btnModeGalaxyEl.addEventListener("click", () => setRenderMode("galaxy"));
 const btnModeSpaceEl = $("#btnModeSpace");

@@ -8,28 +8,15 @@
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body class="single single-galaxy space-mode">
-  <header class="topbar">
-    <h1 class="logo"><b>GALAXY</b> VOYAGE <span class="logo-sub">银河星旅 · 七大行星</span></h1>
-    <div id="statusChip" class="chip" data-kind="idle">组件加载中…</div>
-  </header>
-
   <main class="stage">
     <section class="paper-wrap">
       <video id="camBg" class="hidden" autoplay playsinline muted></video>
       <canvas id="space" class="hidden"></canvas>
       <canvas id="galaxy" class="hidden"></canvas>
       <canvas id="paper" width="900" height="560"></canvas>
-      <video id="cam" class="media-src" autoplay playsinline muted></video>
-      <div id="camStatus" class="media-src"></div>
-      <div id="hint" class="hint">AWAITING HAND INPUT<br><span class="cn">移动手掌选中行星 · 捏合跃迁<br>再捏合 · 返回全景</span></div>
       <div id="demoBadge" class="demo-badge hidden">演示模式 · 虚拟手</div>
       <div id="toast" class="toast hidden"></div>
     </section>
-
-    <div class="float-ctl">
-      <button id="btnDemo" class="btn" type="button">演示模式</button>
-      <button id="btnCam" class="btn" type="button">开启摄像头</button>
-    </div>
   </main>
 
   <footer class="foot">
@@ -38,6 +25,9 @@
   </footer>
 
   <div id="errorPanel" class="error-panel hidden"></div>
+
+  <video id="cam" class="media-src" autoplay playsinline muted></video>
+  <div id="camStatus" class="media-src"></div>
 
   <script>window.__FORCE_MODE = "galaxy";</script>
   <script type="module" src="../js/app.js"></script>

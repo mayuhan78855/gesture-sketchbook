@@ -8,27 +8,15 @@
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body class="single single-flower space-mode">
-  <header class="topbar">
-    <h1 class="logo"><b>FLOWER</b> BLOOM <span class="logo-sub">花开绽放</span></h1>
-    <div id="statusChip" class="chip" data-kind="idle">组件加载中…</div>
-  </header>
-
   <main class="stage">
     <section class="paper-wrap">
       <video id="camBg" class="hidden" autoplay playsinline muted></video>
       <canvas id="space" class="hidden"></canvas>
       <canvas id="galaxy" class="hidden"></canvas>
       <canvas id="paper" width="900" height="560"></canvas>
-      <video id="cam" class="media-src" autoplay playsinline muted></video>
-      <div id="camStatus" class="media-src"></div>
-      <div id="hint" class="hint">AWAITING HAND INPUT<br><span class="cn">张开手掌 · 花在掌心绽放旋转<br>握拳 · 消散</span></div>
       <div id="demoBadge" class="demo-badge hidden">演示模式 · 虚拟手</div>
       <div id="toast" class="toast hidden"></div>
     </section>
-
-    <div class="float-ctl">
-      <button id="btnCam" class="btn" type="button">开启摄像头</button>
-    </div>
   </main>
 
   <footer class="foot">
@@ -37,6 +25,9 @@
   </footer>
 
   <div id="errorPanel" class="error-panel hidden"></div>
+
+  <video id="cam" class="media-src" autoplay playsinline muted></video>
+  <div id="camStatus" class="media-src"></div>
 
   <script>
     window.__FORCE_MODE = "particles";

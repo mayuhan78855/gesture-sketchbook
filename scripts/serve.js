@@ -18,6 +18,7 @@ const mime = {
   ".svg": "image/svg+xml",
   ".md": "text/markdown; charset=utf-8",
   ".ico": "image/x-icon",
+  ".wasm": "application/wasm",
 };
 
 http

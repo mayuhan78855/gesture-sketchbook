@@ -93,7 +93,7 @@
   <table>
     <tr><th style="width:30%">现象</th><th>原因与解决</th></tr>
     <tr><td>页面白屏 / 摄像头不可用</td><td>直接双击打开了 index.html。摄像头只能在 https 或 localhost 下用：<code>node scripts/serve.js</code> 后开 <code>localhost:8000</code></td></tr>
-    <tr><td>一直"加载识别模型…"</td><td>首次需联网下载约 8MB 模型（Google CDN）。检查网络/代理，确认能访问 <code>storage.googleapis.com</code>，换网重试</td></tr>
+    <tr><td>一直"加载识别模型…"</td><td>本地 vendor 模型加载失败（少见；CDN 兑底也不可用时才会发生）。确认 vendor/ 目录完整；检查网络/代理，换网重试；演示模式不受影响</td></tr>
     <tr><td><code>node</code> 不是内部或外部命令</td><td>Node 没装好或没重启终端：重装 LTS 版本，重开命令行</td></tr>
     <tr><td><code>Error: listen EADDRINUSE</code></td><td>8000 端口被占：<code>node scripts/serve.js 8080</code> 换端口</td></tr>
   </table>

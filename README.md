@@ -12,14 +12,14 @@
 
 ## 在线演示
 
-打开即玩（需要允许摄像头权限，或点击"演示模式"无摄像头体验）：
+打开即玩(需要允许摄像头权限,或点击"演示模式"无摄像头体验):
 
 **[打开在线演示 → https://mayuhan78855.github.io/gesture-sketchbook/](https://mayuhan78855.github.io/gesture-sketchbook/)**
 
-两个体验也有独立网址，方便单独分享：
+两个体验也有独立网址,方便单独分享:
 
-- 🌸 **花朵粒子页**（全屏沉浸：摄像头人脸背景，张手花开/握拳消散，只有一种花）：<https://mayuhan78855.github.io/gesture-sketchbook/flower/>
-- 🌌 **银河星旅页**（全屏沉浸：纯黑银河 + 七大行星本色 + 捏合跃迁）：<https://mayuhan78855.github.io/gesture-sketchbook/galaxy/>
+- 🌸 **花朵粒子页**(全屏沉浸:摄像头人脸背景,张手花开/握拳消散,只有一种花):<https://mayuhan78855.github.io/gesture-sketchbook/flower/>
+- 🌌 **银河星旅页**(全屏沉浸:纯黑银河 + 七大行星本色 + 捏合跃迁):<https://mayuhan78855.github.io/gesture-sketchbook/galaxy/>
 
 ## 手势说明
 
@@ -60,13 +60,14 @@
 ## 技术栈
 
 - **原生 HTML / CSS / JavaScript**--没有框架、没有构建步骤,适合初学者逐行阅读
-- **Three.js**--3D 模式(银河星旅 / 星环)的 WebGL 渲染(CDN 按需懒加载)
-- **MediaPipe Tasks Vision(GestureRecognizer)**--Google 开源的浏览器端手势识别,21 个手部关键点 + 手势分类,全部在浏览器本地推理
+- **Three.js**——3D 模式（银河星旅 / 星环）的 WebGL 渲染
+- **MediaPipe Tasks Vision（GestureRecognizer）**——Google 开源的浏览器端手势识别，21 个手部关键点 + 手势分类，全部在浏览器本地推理；**模型与 wasm 已随仓库本地化（vendor/ 目录），无需访问 Google 服务**
 - **Canvas 2D**--粒子/笔迹渲染、HUD 构造线绘制
 
 ## 隐私说明
 
-- 摄像头画面**只在本机浏览器内处理**,不会上传到任何服务器;粒子模式下它同时作为绘制背景实时显示,同样不出本机。
+- 摄像头画面**只在本机浏览器内处理**，不会上传到任何服务器；粒子模式下它同时作为绘制背景实时显示，同样不出本机。
+- 手势识别模型已随仓库本地化（vendor/ 目录），断网也能用（演示模式与三大 3D/粒子体验均离线可玩）。
 - 代码中不存在把视频帧发送到远程接口的调用;唯一的网络请求是首次打开时从 CDN 下载识别模型(约 8MB),之后浏览器会缓存。
 - 关闭页面即停止摄像头,可随时在浏览器地址栏撤销授权。
 

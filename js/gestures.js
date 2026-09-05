@@ -96,25 +96,38 @@ export class GestureEngine {
       if (!lib) throw new Error("vision_bundle 加载失败");
       return lib;
     };
-    try {
-      const lib = await loadLib();
-      const vision = await lib.FilesetResolver.forVisionTasks(CONFIG.wasmCDN);
-      this.recognizer = await this._create(lib, vision, "GPU");
-    } catch (e) {
-      try {
-        const lib = await loadLib();
-        const vision = await lib.FilesetResolver.forVisionTasks(CONFIG.wasmCDN);
-        this.recognizer = await this._create(lib, vision, "CPU");
-      } catch (e2) {
-        this.cb.onError({
-          title: "手势识别模型加载失败",
-          tips: [
-            "首次使用需要联网下载模型（约 8MB），检查网络后重试",
-            "也可以先点「演示模式」体验完整功能",
-          ],
-        });
-        return false;
+    // ---- 2. 加载 MediaPipe 模型：本地 vendor 优先（离线可用）→ Google CDN 兑底；GPU 失败降级 CPU ----
+    const LOCAL_WASM = new URL("../vendor/wasm/", import.meta.url).href;
+    const LOCAL_MODEL = new URL("../vendor/gesture_recognizer.task", import.meta.url).href;
+    const sources = [
+      { wasm: LOCAL_WASM, model: LOCAL_MODEL, label: "本地" },
+      { wasm: CONFIG.wasmCDN, model: CONFIG.modelURL, label: "CDN" },
+    ];
+    let loaded = false;
+    for (const src of sources) {
+      for (const delegate of ["GPU", "CPU"]) {
+        try {
+          const lib = await loadLib();
+          const vision = await lib.FilesetResolver.forVisionTasks(src.wasm);
+          this.recognizer = await this._create(lib, vision, src.model, delegate);
+          loaded = true;
+          break;
+        } catch (e) {
+          this.recognizer = null;
+          await new Promise((r) => setTimeout(r, 400));
+        }
       }
+      if (loaded) break;
+    }
+    if (!loaded) {
+      this.cb.onError({
+        title: "手势识别模型加载失败",
+        tips: [
+          "本地模型与 CDN 均未成功，请检查网络后点击「重试摄像头」",
+          "也可以先点「演示模式」体验完整功能",
+        ],
+      });
+      return false;
     }
     this.cb.onStatus("已就绪 · 伸出手掌试试", "ok");
     this.started = true;
@@ -122,9 +135,9 @@ export class GestureEngine {
     return true;
   }
 
-  _create(lib, vision, delegate) {
+  _create(lib, vision, modelURL, delegate) {
     return lib.GestureRecognizer.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: CONFIG.modelURL, delegate },
+      baseOptions: { modelAssetPath: modelURL, delegate },
       runningMode: "VIDEO",
       numHands: 1,
       minHandDetectionConfidence: 0.5,

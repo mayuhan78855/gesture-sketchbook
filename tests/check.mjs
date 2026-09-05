@@ -163,6 +163,8 @@ try {
       ok(`${sub} 模式切换按钮已隐藏`, modeHidden);
       const sideGone = await page.evaluate(() => { const s = document.querySelector(".side"); return !s || getComputedStyle(s).display === "none"; });
       ok(`${sub} 侧栏已移除（全屏沉浸）`, sideGone);
+      const topbarGone = await page.evaluate(() => document.querySelector(".topbar") === null && document.querySelector(".hint") === null);
+      ok(`${sub} 顶部标题与提示文字已移除`, topbarGone);
       await page.close();
     }
   }

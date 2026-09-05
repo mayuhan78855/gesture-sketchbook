@@ -59,7 +59,8 @@ export const CONFIG = {
     travelDur: 2.2,      // 跃迁飞行时长（秒）
   },
 
-  // MediaPipe 资源地址（首次打开需联网下载模型，之后浏览器会缓存）
+  // MediaPipe 模型/wasm：已本地化在 vendor/ 目录（gestures.js 会优先加载本地，
+  // 下面两个 CDN 地址仅作兜底）
   wasmCDN: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
   modelURL: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
 };
