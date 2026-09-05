@@ -143,7 +143,7 @@ body::after {
 #paper { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 #space, #galaxy { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 #camBg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-.media-src { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+.media-src { position: fixed; left: -9999px; top: 0; width: 320px; height: 240px; opacity: 0.01; pointer-events: none; }
 
 /* 独立单体验页（/flower/ /galaxy/）：全屏沉浸，隐藏侧栏与模式切换 */
 body.single .mode-row { display: none; }
