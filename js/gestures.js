@@ -84,14 +84,25 @@ export class GestureEngine {
     await this.video.play().catch(() => {});
     this.cb.onStatus("摄像头已开启，正在加载识别模型…", "loading");
 
-    // ---- 2. 加载 MediaPipe 模型（懒加载 CDN 库；GPU 失败自动降级 CPU）----
+    // ---- 2. 加载 MediaPipe 模型（懒加载 CDN 库，网络抖动自动重试；GPU 失败降级 CPU）----
+    const loadLib = async () => {
+      let lib = null;
+      for (let i = 0; i < 3; i++) {
+        try {
+          lib = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
+          break;
+        } catch (e) { lib = null; await new Promise((r) => setTimeout(r, 1500)); }
+      }
+      if (!lib) throw new Error("vision_bundle 加载失败");
+      return lib;
+    };
     try {
-      const lib = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
+      const lib = await loadLib();
       const vision = await lib.FilesetResolver.forVisionTasks(CONFIG.wasmCDN);
       this.recognizer = await this._create(lib, vision, "GPU");
     } catch (e) {
       try {
-        const lib = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
+        const lib = await loadLib();
         const vision = await lib.FilesetResolver.forVisionTasks(CONFIG.wasmCDN);
         this.recognizer = await this._create(lib, vision, "CPU");
       } catch (e2) {

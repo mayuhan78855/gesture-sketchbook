@@ -15,6 +15,11 @@ import { EFFECTS } from "./effects.js";
 const $ = (s) => document.querySelector(s);
 const canvas = $("#paper");
 const video = $("#cam");
+// 取景框：视频真正开始播放时点亮预览（流已接入），否则保持 NO SIGNAL
+video.addEventListener("playing", () => {
+  document.querySelector(".view-box")?.classList.add("live");
+  if (mode === "camera") camStatus.textContent = "LIVE";
+});
 const chip = $("#statusChip");
 const hint = $("#hint");
 const toastEl = $("#toast");
