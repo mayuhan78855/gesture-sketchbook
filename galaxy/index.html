@@ -1691,6 +1691,28 @@ class Galaxy3D {
     }));
     this.scene.add(this.galaxyPoints);
 
+    // ---- 太阳：银河中心的发光恒星 + 光晕 ----
+    this.sun = new THREE.Mesh(
+      new THREE.SphereGeometry(1.15, 32, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffe9b0 })
+    );
+    this.sunGlow = new THREE.Mesh(
+      new THREE.SphereGeometry(1.55, 32, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.32, side: THREE.BackSide })
+    );
+    this.scene.add(this.sun, this.sunGlow);
+
+    // ---- 行星轨道线：淡淡的圆环，让“行星绕太阳”一眼可读 ----
+    for (const p of PLANETS) {
+      const orbit = new THREE.Mesh(
+        new THREE.RingGeometry(p.dist - 0.03, p.dist + 0.03, 96),
+        new THREE.MeshBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.1, side: THREE.DoubleSide })
+      );
+      orbit.rotation.x = Math.PI / 2;
+      orbit.position.y = p.y;
+      this.scene.add(orbit);
+    }
+
     // ---- 七大行星 ----
     this.planets = PLANETS.map((p, i) => {
       const ang = i * 2.399963 + 0.7;
