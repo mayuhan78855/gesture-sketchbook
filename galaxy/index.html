@@ -1692,7 +1692,7 @@ class Galaxy3D {
     this.scene.add(this.galaxyPoints);
 
     // ---- 太阳：1400 颗金色粒子聚成的发光恒星（自转 + 脉动）----
-    const SN = 1400;
+    const SN = 4000;
     const sunPos = new Float32Array(SN * 3);
     const sunCol = new Float32Array(SN * 3);
     const cHot = new THREE.Color("#fff3c4"), cMid = new THREE.Color("#ffd25c"), cEdge = new THREE.Color("#ff9a3c");
@@ -1711,7 +1711,7 @@ class Galaxy3D {
     sunGeo.setAttribute("position", new THREE.BufferAttribute(sunPos, 3));
     sunGeo.setAttribute("color", new THREE.BufferAttribute(sunCol, 3));
     this.sun = new THREE.Points(sunGeo, new THREE.PointsMaterial({
-      size: 0.055, vertexColors: true, transparent: true, opacity: 0.95,
+      size: 0.038, vertexColors: true, transparent: true, opacity: 0.95,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
     }));
     this.sunHalo = new THREE.Mesh(
