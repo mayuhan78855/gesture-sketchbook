@@ -140,7 +140,9 @@ export const EFFECTS = {
     hint: "捏合聚合成花，松开消散",
     glyph: "M6 10 L10 14 M10 14 Q11.5 15.5 12 15.5 M12 4 L15 7 M15 7 Q16.5 8.5 16.5 9 M16.5 9 L20 13",
     onEnter(hand, ps) {
-      bloom = { cx: hand.tip.x, cy: hand.tip.y, rot: Math.random() * Math.PI * 2, grow: 0, seeds: [] };
+      // 花朵页：花心锚定掌心；完整版：锚定食指尖
+      const c = window.__FLOWER_ONLY ? hand.palm : hand.tip;
+      bloom = { cx: c.x, cy: c.y, rot: Math.random() * Math.PI * 2, grow: 0, seeds: [] };
       // 每瓣固定长度 => 剪影均匀；金芯实心盘 => 视觉锚点
       const petalLen = [];
       for (let k = 0; k < 6; k++) petalLen.push(0.94 + Math.random() * 0.16);
@@ -168,25 +170,26 @@ export const EFFECTS = {
         const seed = { a, r, t };
         bloom.seeds.push(seed);
         ps.spawn({
-          x: hand.tip.x + (Math.random() - 0.5) * 36,
-          y: hand.tip.y + (Math.random() - 0.5) * 36,
+          x: c.x + (Math.random() - 0.5) * 36,
+          y: c.y + (Math.random() - 0.5) * 36,
           vx: (Math.random() - 0.5) * 140, vy: (Math.random() - 0.5) * 140,
           life: 6, size,
           color, gravity: 0, drag: 0.9,
-          tx: hand.tip.x, ty: hand.tip.y, stiff: 13 + Math.random() * 9,
+          tx: c.x, ty: c.y, stiff: 13 + Math.random() * 9,
           seed,
         });
       }
-      ps.burst(hand.tip.x, hand.tip.y, 120, { color: hand.color, speed: [50, 200], life: [0.8, 1.6] });
+      ps.burst(c.x, c.y, 120, { color: hand.color, speed: [50, 200], life: [0.8, 1.6] });
     },
     onFrame(hand, ps) {
       if (!bloom) return;
-      // 花心跟随捏合点；花朵随时间绽放并缓慢旋转（花朵页跟手更紧，手感更像“手控制”）
+      // 花朵页：花心锚定掌心 + 明显旋转；完整版：跟食指尖 + 缓转
+      const anchor = window.__FLOWER_ONLY ? hand.palm : hand.tip;
       const follow = window.__FLOWER_ONLY ? 0.3 : 0.12;
-      bloom.cx += (hand.tip.x - bloom.cx) * follow;
-      bloom.cy += (hand.tip.y - bloom.cy) * follow;
+      bloom.cx += (anchor.x - bloom.cx) * follow;
+      bloom.cy += (anchor.y - bloom.cy) * follow;
       bloom.grow = Math.min(1, bloom.grow + 0.013);
-      bloom.rot += 0.0018;
+      bloom.rot += window.__FLOWER_ONLY ? 0.02 : 0.0018;
       for (const p of ps.parts) {
         if (!p.seed) continue;
         const s = p.seed;
