@@ -24,11 +24,11 @@
 
 import { CONFIG } from "./config.js";
 
-// 花瓣颜色：花芯金黄，越往外越从粉紫过渡到蓝紫；瓣尖更亮
+// 花瓣颜色：花芯金黄，越往外越从品红过渡到蓝紫；加深加饱和，避免人脸背景上发白
 function petalColor(t) {
-  if (t < 0.16) return "#ffd27a";
+  if (t < 0.16) return "#ffc94d";
   const hue = 335 - (t - 0.16) * 140;
-  const light = 56 + t * 22;
+  const light = 42 + t * 26;
   return `hsl(${hue.toFixed(0)}, 95%, ${light.toFixed(0)}%)`;
 }
 
@@ -156,7 +156,7 @@ export const EFFECTS = {
           t = 0.03 + Math.random() * 0.09;
           a = Math.random() * Math.PI * 2;
           r = 3 + Math.random() * 26;
-          color = Math.random() < 0.3 ? "#fff3d6" : "#ffd27a";
+          color = Math.random() < 0.3 ? "#fff3d6" : "#ffcf5c";
           size = 1.6 + Math.random() * 1.5;
         } else {
           // 泪滴形花瓣：瓣根窄、瓣中最宽、瓣尖收拢，瓣间留出明显间隙
@@ -165,7 +165,7 @@ export const EFFECTS = {
           a = petal * (Math.PI / 3) + (Math.random() - 0.5) * 2 * half + (Math.random() - 0.5) * 0.012;
           r = 30 + t * 150 * petalLen[petal] * (0.96 + Math.random() * 0.08);
           color = petalColor(t);
-          size = 1.0 + Math.random() * 0.8;
+          size = 1.3 + Math.random() * 0.9;
         }
         const seed = { a, r, t };
         bloom.seeds.push(seed);
