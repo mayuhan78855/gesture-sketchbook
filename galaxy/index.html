@@ -2412,15 +2412,14 @@ function galaxyLoop() {
     for (const l of galaxy.labels) {
       if (!l.visible) continue;
       const sel = l.selected;
-      const c = sel ? "rgba(255, 180, 84, .95)" : "rgba(45, 216, 255, .5)";
+      const c = sel ? "rgba(255, 180, 84, .95)" : "rgba(45, 216, 255, .75)";
       lc.strokeStyle = c; lc.fillStyle = c;
       lc.beginPath();
       lc.moveTo(l.x, l.y - 5); lc.lineTo(l.x + 5, l.y); lc.lineTo(l.x, l.y + 5); lc.lineTo(l.x - 5, l.y);
       lc.closePath(); lc.stroke();
-      if (sel) {
-        lc.fillText(singleUI ? `${l.en} ▶` : `${l.name} ${l.en} ▶`, l.x + 10, l.y + 4);
-        if (!singleUI && galaxy.state === "arrived") lc.fillText(l.blurb, l.x + 10, l.y + 22);
-      }
+      // 英文名常显；选中的行星变琥珀色并加 ▶
+      lc.fillText(sel ? `${l.en} ▶` : l.en, l.x + 10, l.y + 4);
+      if (sel && !singleUI && galaxy.state === "arrived") lc.fillText(l.blurb, l.x + 10, l.y + 22);
     }
   }
   hint?.classList.toggle("hidden", !!lastHand);
