@@ -136,6 +136,9 @@ body::after {
 #space, #galaxy { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 #camBg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
+/* 独立单体验页（/flower/ /galaxy/）：隐藏模式切换，聚焦单一体验 */
+body.single .mode-row { display: none; }
+
 /* 3D 空间模式（银河/星环）：纯黑沉浸背景，隐藏纸面网格 */
 .paper-wrap.space-bg { background: #000; border-color: rgba(45, 216, 255, .1); }
 body.space-mode { background: #020409; }

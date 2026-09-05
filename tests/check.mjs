@@ -150,6 +150,21 @@ try {
     await page.close();
   }
 
+  // ---- 2e. 独立页面：/flower/ 与 /galaxy/ 强制模式生效 ----
+  console.log("\n[2e] 独立页面 (/flower/ /galaxy/)");
+  {
+    for (const [sub, expectMode] of [["flower/", "particles"], ["galaxy/", "galaxy"]]) {
+      const page = await browser.newPage({ viewport: { width: 900, height: 572 } });
+      track(page);
+      await page.goto(`${BASE}/${sub}?demo=1`);
+      await page.waitForFunction((m) => window.__app && window.__app.renderMode === m && window.__app.particles() > 80, expectMode, { timeout: 30000 });
+      ok(`${sub} 强制模式 ${expectMode} 生效`, true);
+      const modeHidden = await page.evaluate(() => { const r = document.querySelector(".mode-row"); return !r || getComputedStyle(r).display === "none"; });
+      ok(`${sub} 模式切换按钮已隐藏`, modeHidden);
+      await page.close();
+    }
+  }
+
   // ---- 3. 摄像头异常路径：无摄像头/拒绝权限 -> 友好错误提示，不崩溃 ----
   console.log("\n[3] 摄像头异常路径");
   {

@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>手势草稿本 · Gesture Sketchbook</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12 L5 7 M9 12 L9 5 M13 12 L13 5 M17 12 L17 7 M5 12 Q10 16 17 12 L17 10' fill='none' stroke='%232dd8ff' stroke-width='1.6' stroke-linecap='round'/></svg>">
-  <link rel="stylesheet" href="css/style.css">
+  <title>花开绽放 · Flower Bloom</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='2.2' fill='none' stroke='%23ffb454' stroke-width='1.4'/><path d='M12 9.8 C10 7 10 4.5 12 3 C14 4.5 14 7 12 9.8 M14.2 11 C17.5 9.6 19.8 10.4 20.6 12.8 C18.2 14.2 15.6 13.4 14.2 11 M9.8 11 C6.5 9.6 4.2 10.4 3.4 12.8 C5.8 14.2 8.4 13.4 9.8 11' fill='none' stroke='%232dd8ff' stroke-width='1.3' stroke-linecap='round'/></svg>">
+  <link rel="stylesheet" href="../css/style.css">
 </head>
-<body>
+<body class="single single-flower">
   <header class="topbar">
-    <h1 class="logo"><b>GESTURE</b> SKETCHBOOK <span class="logo-sub">手势草稿本 · NEON HUD</span></h1>
+    <h1 class="logo"><b>FLOWER</b> BLOOM <span class="logo-sub">花开绽放 · 摄像头人脸背景</span></h1>
     <div id="statusChip" class="chip" data-kind="idle">组件加载中…</div>
   </header>
 
@@ -19,7 +19,7 @@
       <canvas id="space" class="hidden"></canvas>
       <canvas id="galaxy" class="hidden"></canvas>
       <canvas id="paper" width="900" height="560"></canvas>
-      <div id="hint" class="hint">AWAITING HAND INPUT<br><span class="cn">将手伸入取景区 · 张开手掌开始绘制</span></div>
+      <div id="hint" class="hint">AWAITING HAND INPUT<br><span class="cn">捏合手指 · 花朵在指尖绽放</span></div>
       <div id="demoBadge" class="demo-badge hidden">演示模式 · 虚拟手</div>
       <div id="toast" class="toast hidden"></div>
     </section>
@@ -37,28 +37,13 @@
       <div class="card">
         <div class="card-title">手势图例</div>
         <ul class="legend"></ul>
-        <label class="check"><input type="checkbox" id="constrToggle"> 显示构造线</label>
       </div>
 
       <div class="card">
         <div class="card-title">工具</div>
         <div class="swatches" id="swatches"></div>
         <div class="btn-row">
-          <button id="btnModeParticles" class="btn" type="button">粒子模式</button>
-          <button id="btnModeInk" class="btn ghost" type="button">笔迹模式</button>
-        </div>
-        <div class="btn-row mode-row">
-          <button id="btnModeGalaxy" class="btn" type="button">银河</button>
-          <button id="btnModeSpace" class="btn ghost" type="button">星环</button>
-          <button id="btnModeParticles" class="btn ghost" type="button">粒子</button>
-          <button id="btnModeInk" class="btn ghost" type="button">笔迹</button>
-        </div>
-        <div class="btn-row">
-          <button id="btnUndo" class="btn" type="button">撤销</button>
           <button id="btnClear" class="btn" type="button">清空</button>
-          <button id="btnSave" class="btn" type="button">导出 PNG</button>
-        </div>
-        <div class="btn-row">
           <button id="btnDemo" class="btn ghost" type="button">演示模式</button>
           <button id="btnCam" class="btn ghost" type="button">开启摄像头</button>
         </div>
@@ -68,12 +53,13 @@
 
   <footer class="foot">
     摄像头画面仅在本机浏览器内分析，不会上传到任何服务器 ·
-    <a href="flower/">花朵粒子页</a> · <a href="galaxy/">银河星旅页</a> ·
+    <a href="../galaxy/">银河星旅页</a> · <a href="../index.html">完整版（四模式）</a> ·
     <a href="https://github.com/mayuhan78855/gesture-sketchbook" target="_blank" rel="noopener">源码仓库</a>
   </footer>
 
   <div id="errorPanel" class="error-panel hidden"></div>
 
-  <script type="module" src="js/app.js"></script>
+  <script>window.__FORCE_MODE = "particles";</script>
+  <script type="module" src="../js/app.js"></script>
 </body>
 </html>

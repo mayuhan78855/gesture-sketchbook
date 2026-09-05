@@ -29,7 +29,10 @@ const pad = new SketchPad(canvas);
 const ps = new ParticleSystem(canvas);
 
 const modeParam = new URLSearchParams(location.search).get("mode");
-let renderMode = modeParam === "ink" ? "ink" : modeParam === "particles" ? "particles" : modeParam === "space3d" ? "space3d" : "galaxy"; // 默认银河星旅
+// 页面强制模式（flower/ 与 galaxy/ 独立页用）> URL 参数 > 默认银河星旅
+const VALID_MODES = ["ink", "particles", "space3d", "galaxy"];
+let renderMode = window.__FORCE_MODE || modeParam || "galaxy";
+if (!VALID_MODES.includes(renderMode)) renderMode = "galaxy";
 let engine = null;
 let demo = null;
 let mode = "paper"; // 运行状态：paper | camera | demo
@@ -408,7 +411,7 @@ function setRenderMode(m) {
   lastGesture = "None";
   prevPalm = null;
   if (demo && m !== "space3d" && m !== "galaxy") demo.hold = false; // 离开 3D 模式时解除时间轴暂停
-  const checkWrap = constrToggle.closest(".check");
+  const checkWrap = constrToggle ? constrToggle.closest(".check") : null;
   if (checkWrap) checkWrap.classList.toggle("hidden", m !== "ink");
   $("#space").classList.toggle("hidden", m !== "space3d");
   $("#galaxy").classList.toggle("hidden", m !== "galaxy");
@@ -422,10 +425,10 @@ function setRenderMode(m) {
 }
 
 function syncModeButtons() {
-  $("#btnModeGalaxy").classList.toggle("ghost", renderMode !== "galaxy");
-  $("#btnModeSpace").classList.toggle("ghost", renderMode !== "space3d");
-  $("#btnModeParticles").classList.toggle("ghost", renderMode !== "particles");
-  $("#btnModeInk").classList.toggle("ghost", renderMode !== "ink");
+  $("#btnModeGalaxy")?.classList.toggle("ghost", renderMode !== "galaxy");
+  $("#btnModeSpace")?.classList.toggle("ghost", renderMode !== "space3d");
+  $("#btnModeParticles")?.classList.toggle("ghost", renderMode !== "particles");
+  $("#btnModeInk")?.classList.toggle("ghost", renderMode !== "ink");
 }
 
 // ---------- 摄像头 / 演示 ----------
@@ -475,6 +478,7 @@ function stopEngine() {
 
 // ---------- UI ----------
 function syncSwatches() {
+  if (!swatchesEl) return; // 独立页面可能没有色板
   [...swatchesEl.children].forEach((el, i) =>
     el.classList.toggle("active", i === pad.colorIdx)
   );
@@ -529,16 +533,23 @@ function buildLegend() {
   }
 }
 
-$("#btnUndo").addEventListener("click", () => { pad.undo(); showToast("撤销上一笔"); });
-$("#btnClear").addEventListener("click", () => { pad.clear(); ps.killAll(0); showToast("已清空"); });
-$("#btnSave").addEventListener("click", () => pad.exportPNG());
+const btnUndoEl = $("#btnUndo");
+if (btnUndoEl) btnUndoEl.addEventListener("click", () => { pad.undo(); showToast("撤销上一笔"); });
+const btnClearEl = $("#btnClear");
+if (btnClearEl) btnClearEl.addEventListener("click", () => { pad.clear(); ps.killAll(0); showToast("已清空"); });
+const btnSaveEl = $("#btnSave");
+if (btnSaveEl) btnSaveEl.addEventListener("click", () => pad.exportPNG());
 $("#btnDemo").addEventListener("click", startDemo);
 $("#btnCam").addEventListener("click", startCamera);
-$("#btnModeGalaxy").addEventListener("click", () => setRenderMode("galaxy"));
-$("#btnModeSpace").addEventListener("click", () => setRenderMode("space3d"));
-$("#btnModeParticles").addEventListener("click", () => setRenderMode("particles"));
-$("#btnModeInk").addEventListener("click", () => setRenderMode("ink"));
-constrToggle.addEventListener("change", () => {
+const btnModeGalaxyEl = $("#btnModeGalaxy");
+if (btnModeGalaxyEl) btnModeGalaxyEl.addEventListener("click", () => setRenderMode("galaxy"));
+const btnModeSpaceEl = $("#btnModeSpace");
+if (btnModeSpaceEl) btnModeSpaceEl.addEventListener("click", () => setRenderMode("space3d"));
+const btnModeParticlesEl = $("#btnModeParticles");
+if (btnModeParticlesEl) btnModeParticlesEl.addEventListener("click", () => setRenderMode("particles"));
+const btnModeInkEl = $("#btnModeInk");
+if (btnModeInkEl) btnModeInkEl.addEventListener("click", () => setRenderMode("ink"));
+if (constrToggle) constrToggle.addEventListener("change", () => {
   pad.construction = constrToggle.checked;
   pad.dirty = true;
 });
@@ -550,7 +561,7 @@ document.addEventListener("keydown", (e) => {
     const i = Number(e.key) - 1;
     if (i < CONFIG.colors.length) { pad.setColor(i); syncSwatches(); }
   }
-  if (e.key.toLowerCase() === "c" && renderMode === "ink") {
+  if (e.key.toLowerCase() === "c" && renderMode === "ink" && constrToggle) {
     const on = pad.toggleConstruction();
     constrToggle.checked = on;
   }
@@ -575,10 +586,10 @@ window.__app = {
 };
 
 // ---------- 启动 ----------
-buildSwatches();
+if (swatchesEl) buildSwatches();
 buildLegend();
 syncModeButtons();
-const checkWrap0 = constrToggle.closest(".check");
+const checkWrap0 = constrToggle ? constrToggle.closest(".check") : null;
 if (checkWrap0) checkWrap0.classList.toggle("hidden", renderMode !== "ink"); // 只有笔迹模式显示构造线开关
 if (renderMode === "particles") {
   particleLoop();

@@ -1,0 +1,18 @@
+﻿import { spawn } from "node:child_process";
+import { chromium } from "playwright-core";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const server = spawn(process.execPath, ["scripts/serve.js", "8134"], { cwd: root, stdio: "ignore" });
+await new Promise((r) => setTimeout(r, 1200));
+const browser = await chromium.launch({ channel: "msedge", headless: true });
+const page = await browser.newPage({ viewport: { width: 900, height: 572 } });
+page.on("pageerror", (e) => console.log("[pageerror]", String(e).slice(0, 300)));
+page.on("console", (m) => { if (m.type() === "error") console.log("[console]", m.text().slice(0, 200)); });
+page.on("requestfailed", (r) => console.log("[reqfail]", r.url().slice(0, 120)));
+const resp = await page.goto("http://localhost:8134/flower/?demo=1");
+console.log("[status]", resp.status());
+await page.waitForTimeout(6000);
+const d = await page.evaluate(() => ({ rm: window.__app?.renderMode, p: window.__app?.particles(), mode: window.__app?.mode, chip: document.querySelector("#statusChip")?.textContent })).catch((e) => "EVAL-FAIL: " + String(e).slice(0, 200));
+console.log("STATE:", JSON.stringify(d));
+await browser.close(); server.kill();

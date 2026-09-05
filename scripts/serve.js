@@ -25,13 +25,15 @@ http
     let p = decodeURIComponent((req.url || "/").split("?")[0]);
     if (p === "/") p = "/index.html";
     const file = path.join(root, p);
-    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    let target = file;
+    if (fs.existsSync(file) && fs.statSync(file).isDirectory()) target = path.join(file, "index.html"); // 子目录首页（/flower/ /galaxy/）
+    if (!target.startsWith(root) || !fs.existsSync(target) || fs.statSync(target).isDirectory()) {
       res.writeHead(404);
       res.end("404 Not Found");
       return;
     }
-    res.writeHead(200, { "Content-Type": mime[path.extname(file).toLowerCase()] || "application/octet-stream" });
-    fs.createReadStream(file).pipe(res);
+    res.writeHead(200, { "Content-Type": mime[path.extname(target).toLowerCase()] || "application/octet-stream" });
+    fs.createReadStream(target).pipe(res);
   })
   .listen(port, () => {
     console.log(`手势草稿本已启动：http://localhost:${port}`);
