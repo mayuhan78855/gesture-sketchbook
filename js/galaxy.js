@@ -23,7 +23,7 @@ const PLANETS = [
 ];
 
 // Three.js 加载：本地 vendor 优先（随仓库部署，离线可用），CDN 兑底
-async function loadTHREE() {
+async function loadTHREEGalaxy() {
   let lastErr;
   for (const src of ["../vendor/three.module.js", "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "https://unpkg.com/three@0.160.0/build/three.module.js"]) {
     try { return await import(src); } catch (e) { lastErr = e; }
@@ -31,7 +31,7 @@ async function loadTHREE() {
   throw lastErr;
 }
 
-const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const clampG = (v, a, b) => Math.min(b, Math.max(a, v));
 const smooth = (t) => t * t * (3 - 2 * t);
 
 export class Galaxy3D {
@@ -48,7 +48,7 @@ export class Galaxy3D {
   }
 
   async init() {
-    const THREE = await loadTHREE();
+    const THREE = await loadTHREEGalaxy();
     const G = CONFIG.galaxy;
     this.THREE = THREE; // 供 init 之外的方法使用（Vector3 等）
     this.THREE = THREE;
@@ -263,3 +263,4 @@ export class Galaxy3D {
     this.renderer.render(this.scene, this.camera);
   }
 }
+

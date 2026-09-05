@@ -1,0 +1,14 @@
+﻿import { chromium } from "playwright-core";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const browser = await chromium.launch({ channel: "msedge", headless: true });
+const page = await browser.newPage({ viewport: { width: 900, height: 572 } });
+page.on("pageerror", (e) => console.log("[pageerror]", String(e.stack || e).slice(0, 400)));
+page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") console.log("[console." + m.type() + "]", m.text().slice(0, 250)); });
+page.on("requestfailed", (r) => console.log("[reqfail]", r.url().slice(0, 110), r.failure()?.errorText));
+await page.goto("file:///" + path.join(root, "flower", "index.html").replace(/\\/g, "/") + "?demo=1");
+await page.waitForTimeout(6000);
+const d = await page.evaluate(() => ({ rm: window.__app?.renderMode, p: window.__app?.particles(), chip: document.querySelector("#statusChip")?.textContent })).catch((e) => "EVAL: " + String(e).slice(0, 150));
+console.log("STATE:", JSON.stringify(d));
+await browser.close();
