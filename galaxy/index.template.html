@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>银河星旅 · Galaxy Voyage</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='3.2' fill='none' stroke='%232dd8ff' stroke-width='1.6'/><ellipse cx='12' cy='12' rx='9' ry='3.6' fill='none' stroke='%232dd8ff' stroke-width='1.2' transform='rotate(-18 12 12)'/></svg>">
+  <!-- STYLESHEET -->
+</head>
+<body class="single single-galaxy space-mode">
+  <main class="stage">
+    <section class="paper-wrap">
+      <video id="camBg" class="hidden" autoplay playsinline muted></video>
+      <canvas id="space" class="hidden"></canvas>
+      <canvas id="galaxy" class="hidden"></canvas>
+      <canvas id="paper" width="900" height="560"></canvas>
+      <div id="demoBadge" class="demo-badge hidden">演示模式 · 虚拟手</div>
+      <div id="toast" class="toast hidden"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    摄像头画面仅在本机浏览器内分析，不会上传 ·
+    <a href="../flower/">花开绽放</a> · <a href="../index.html">完整版</a>
+  </footer>
+
+  <div id="errorPanel" class="error-panel hidden"></div>
+
+  <video id="cam" class="media-src" autoplay playsinline muted></video>
+  <div id="camStatus" class="media-src"></div>
+
+  <!-- APPJS -->
+  <script>window.__FORCE_MODE = "galaxy";</script>
+</body>
+</html>

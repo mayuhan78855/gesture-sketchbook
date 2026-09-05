@@ -1,7 +1,7 @@
 // ============================================================
 // scripts/build-standalone.mjs —— 生成单文件独立页
-// 把 css/js 全部内联进 flower/index.html 与 galaxy/index.html，
-// 使两个独立页成为"双击即玩"的自包含文件（模型仍从线上/CDN 加载）。
+// 读取 flower/index.template.html 与 galaxy/index.template.html，
+// 将 css 与全部 js 内联，输出 flower/index.html 与 galaxy/index.html。
 // 运行：node scripts/build-standalone.mjs
 // ============================================================
 
@@ -36,15 +36,20 @@ js = js.replace(/import\("\.\/demo\.js"\)\.then\(\(\{ DemoHand \}\) => \{/, "Pro
 js = js.replace(/const \{ Space3D \} = await import\("\.\/space3d\.js"\);/, "/* Space3D 已内联 */");
 js = js.replace(/const \{ Galaxy3D \} = await import\("\.\/galaxy\.js"\);/, "/* Galaxy3D 已内联 */");
 
+// 自检：space3d 的 loadTHREE 定义+调用应保留（2 处），不得出现重复定义
+const bare = (js.match(/loadTHREE(?!Galaxy)/g) || []).length;
+if (bare !== 2) throw new Error(`standalone 构建自检失败：裸 loadTHREE 应为 2，实际 ${bare}`);
+
 const css = read("css/style.css");
 
-function build(pagePath, outPath) {
-  let html = read(pagePath);
-  html = html.replace('<link rel="stylesheet" href="../css/style.css">', `<style>\n${css}\n</style>`);
-  html = html.replace('<script type="module" src="../js/app.js"></script>', `<script type="module">\n${js}\n</script>`);
-  writeFileSync(path.join(root, outPath), html);
-  console.log(`built ${outPath} (${(html.length / 1024).toFixed(0)} KB)`);
+function build(pageDir) {
+  let html = read(`${pageDir}/index.template.html`);
+  html = html.replace("<!-- STYLESHEET -->", `<style>\n${css}\n</style>`);
+  html = html.replace("<!-- APPJS -->", `<script type="module">\n${js}\n</script>`);
+  const out = path.join(root, pageDir, "index.html");
+  writeFileSync(out, html);
+  console.log(`built ${pageDir}/index.html (${(html.length / 1024).toFixed(0)} KB)`);
 }
 
-build("flower/index.html", "flower/index.html");
-build("galaxy/index.html", "galaxy/index.html");
+build("flower");
+build("galaxy");
