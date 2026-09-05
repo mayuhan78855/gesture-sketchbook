@@ -2373,7 +2373,14 @@ async function enterSpace() {
     } catch (e) {
       $("#space").classList.add("hidden");
       setStatus("3D 引擎加载失败", "err");
-      showToast("3D 引擎加载失败（Three.js 需联网），已切回粒子模式");
+      showError({
+        title: "3D 银河需要 WebGL 支持",
+        tips: [
+          "你的浏览器无法创建 WebGL 画面（可能被禁用或显卡驱动问题）",
+          "Chrome/Edge 设置里搜索「硬件加速」并开启，然后重启浏览器",
+          "也可以先点「演示模式」看粒子效果的演示",
+        ],
+      });
       renderMode = "particles";
       syncModeButtons(); buildLegend();
       pad._resize(); ps._resize(); particleLoop();
@@ -2441,7 +2448,14 @@ async function enterGalaxy() {
     } catch (e) {
       $("#galaxy").classList.add("hidden");
       setStatus("3D 引擎加载失败", "err");
-      showToast("3D 引擎加载失败（Three.js 需联网），已切回粒子模式");
+      showError({
+        title: "3D 银河需要 WebGL 支持",
+        tips: [
+          "你的浏览器无法创建 WebGL 画面（可能被禁用或显卡驱动问题）",
+          "Chrome/Edge 设置里搜索「硬件加速」并开启，然后重启浏览器",
+          "也可以先点「演示模式」看粒子效果的演示",
+        ],
+      });
       renderMode = "particles";
       syncModeButtons(); buildLegend();
       pad._resize(); ps._resize(); particleLoop();

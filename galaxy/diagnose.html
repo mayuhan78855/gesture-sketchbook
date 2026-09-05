@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>诊断 · 银河星旅</title>
+<style>
+  body { margin: 0; font-family: Consolas, "Cascadia Code", monospace; background: #070b12; color: #d7e6f5; padding: 24px; line-height: 1.9; font-size: 15px; }
+  h1 { font-size: 20px; color: #2dd8ff; letter-spacing: .1em; }
+  .ok { color: #35e08c; }
+  .bad { color: #ff5d6c; }
+  .warn { color: #ffb454; }
+  .item { border-left: 3px solid #2dd8ff44; padding: 6px 14px; margin: 8px 0; background: #0b111c; }
+  b { color: #fff; }
+  a { color: #2dd8ff; }
+</style>
+</head>
+<body>
+<h1>银河星旅 · 一键诊断</h1>
+<div id="out"><div class="item">正在检查…</div></div>
+<script>
+(function () {
+  const out = [];
+  function add(label, value, cls) {
+    out.push('<div class="item"><b>' + label + '：</b><span class="' + (cls || '') + '">' + value + '</span></div>');
+  }
+  // 1. WebGL 支持
+  try {
+    const cv = document.createElement("canvas");
+    const gl = cv.getContext("webgl2") || cv.getContext("webgl");
+    if (gl) {
+      const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+      const gpu = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "(未知显卡)";
+      add("WebGL", "支持 — " + gpu, "ok");
+    } else add("WebGL", "不支持！3D 银河无法渲染。请改用 Chrome/Edge 最新版，并在浏览器设置里开启硬件加速。", "bad");
+  } catch (e) { add("WebGL", "检测失败: " + e.message, "bad"); }
+
+  // 2. 关键文件可达性（根据页面位置自动推算仓库根路径）
+  const base = new URL("../../", location.href).href;
+  const files = ["vendor/gesture_recognizer.task", "vendor/wasm/vision_wasm_internal.wasm", "vendor/three.module.js", "js/app.js"];
+  files.forEach((f) => {
+    fetch(base + f, { method: "HEAD" }).then((r) => {
+      add("文件 " + f, r.ok ? "可访问（" + r.status + "）" : "HTTP " + r.status + " — 文件缺失！", r.ok ? "ok" : "bad");
+      done();
+    }).catch((e) => { add("文件 " + f, "加载失败（网络/路径问题）: " + e.message, "bad"); done(); });
+  });
+
+  // 3. 摄像头
+  navigator.mediaDevices.getUserMedia({ video: true }).then((s) => {
+    add("摄像头", "可以打开（已授权）", "ok");
+    s.getTracks().forEach((t) => t.stop());
+    done();
+  }).catch((e) => {
+    add("摄像头", "无法打开: " + e.name + " — " + (e.name === "NotAllowedError" ? "去地址栏左侧把权限改为允许" : e.name === "NotFoundError" ? "没检测到摄像头设备" : "被其他程序占用"), "bad");
+    done();
+  });
+
+  // 4. 分辨率与浏览器
+  add("屏幕", window.innerWidth + "×" + window.innerHeight, "ok");
+  add("浏览器", navigator.userAgent.slice(0, 90), "ok");
+
+  let left = files.length + 1;
+  function done() { if (--left === 0) finish(); }
+  function finish() {
+    out.push('<div class="item" style="margin-top:18px">把本页<b>整页截图</b>发给 AI 助手即可精确定位问题。</div>');
+    out.push('<div class="item">在线版：<a href="https://mayuhan78855.github.io/gesture-sketchbook/galaxy/">https://mayuhan78855.github.io/gesture-sketchbook/galaxy/</a></div>');
+    document.getElementById("out").innerHTML = out.join("");
+  }
+})();
+</script>
+</body>
+</html>
