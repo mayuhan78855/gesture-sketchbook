@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 8125;
 const BASE = `http://localhost:${PORT}`;
+// 可选参数：node tests/soak.mjs flower —— 测花朵独立页；默认测主站（当前默认模式）
+const sub = process.argv[2] === "flower" ? "flower/?demo=1" : "?demo=1";
 
 const server = spawn(process.execPath, ["scripts/serve.js", String(PORT)], { cwd: root, stdio: "ignore" });
 await new Promise((r) => setTimeout(r, 1200));
@@ -23,7 +25,7 @@ const errors = [];
 page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
 page.on("pageerror", (e) => errors.push(String(e)));
 
-await page.goto(`${BASE}/?demo=1`);
+await page.goto(`${BASE}/${sub}`);
 await page.waitForFunction(() => window.__app && window.__app.particles() > 80, { timeout: 15000 });
 
 console.log("5 分钟稳定性测试开始（30s × 10 次采样）…");

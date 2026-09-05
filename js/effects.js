@@ -181,9 +181,10 @@ export const EFFECTS = {
     },
     onFrame(hand, ps) {
       if (!bloom) return;
-      // 花心跟随捏合点；花朵随时间绽放并缓慢旋转
-      bloom.cx += (hand.tip.x - bloom.cx) * 0.12;
-      bloom.cy += (hand.tip.y - bloom.cy) * 0.12;
+      // 花心跟随捏合点；花朵随时间绽放并缓慢旋转（花朵页跟手更紧，手感更像“手控制”）
+      const follow = window.__FLOWER_ONLY ? 0.3 : 0.12;
+      bloom.cx += (hand.tip.x - bloom.cx) * follow;
+      bloom.cy += (hand.tip.y - bloom.cy) * follow;
       bloom.grow = Math.min(1, bloom.grow + 0.013);
       bloom.rot += 0.0018;
       for (const p of ps.parts) {
