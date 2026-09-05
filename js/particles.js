@@ -181,7 +181,15 @@ export class ParticleSystem {
     ctx.clearRect(0, 0, this.w, this.h);
     ctx.drawImage(this.trail, 0, 0, this.w, this.h);
 
-    // 聚合粒子：主画布实色，花形清晰可辨
+    // 聚合粒子：主画布实色，花形清晰可辨；先叠一层低强度加色辉光，做出发光质感
+    ctx.globalCompositeOperation = "lighter";
+    for (const [p, a] of seeded) {
+      ctx.globalAlpha = Math.min(1, a * 0.32);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(1.2, p.size * 2.0), 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.globalCompositeOperation = "source-over";
     for (const [p, a] of seeded) {
       ctx.globalAlpha = Math.min(1, a * 0.95);

@@ -144,9 +144,9 @@ export const EFFECTS = {
       // 每瓣固定长度 => 剪影均匀；金芯实心盘 => 视觉锚点
       const petalLen = [];
       for (let k = 0; k < 6; k++) petalLen.push(0.94 + Math.random() * 0.16);
-      const N = 900;
+      const N = 3200;
       for (let i = 0; i < N; i++) {
-        const core = i < 150;
+        const core = i < 240;
         const petal = Math.floor(Math.random() * 6);
         let t, a, r, color, size;
         if (core) {
@@ -155,15 +155,15 @@ export const EFFECTS = {
           a = Math.random() * Math.PI * 2;
           r = 3 + Math.random() * 26;
           color = Math.random() < 0.3 ? "#fff3d6" : "#ffd27a";
-          size = 1.8 + Math.random() * 1.6;
+          size = 1.6 + Math.random() * 1.5;
         } else {
           // 泪滴形花瓣：瓣根窄、瓣中最宽、瓣尖收拢，瓣间留出明显间隙
           t = 0.14 + Math.pow(Math.random(), 0.8) * 0.86;
-          const half = 0.05 + 0.26 * Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.06)), 0.8);
-          a = petal * (Math.PI / 3) + (Math.random() - 0.5) * 2 * half + (Math.random() - 0.5) * 0.015;
-          r = 30 + t * 150 * petalLen[petal] * (0.92 + Math.random() * 0.16);
+          const half = 0.05 + 0.22 * Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.06)), 0.8);
+          a = petal * (Math.PI / 3) + (Math.random() - 0.5) * 2 * half + (Math.random() - 0.5) * 0.012;
+          r = 30 + t * 150 * petalLen[petal] * (0.96 + Math.random() * 0.08);
           color = petalColor(t);
-          size = 1.5 + Math.random() * 1.1;
+          size = 1.0 + Math.random() * 0.8;
         }
         const seed = { a, r, t };
         bloom.seeds.push(seed);
@@ -184,7 +184,7 @@ export const EFFECTS = {
       // 花心跟随捏合点；花朵随时间绽放并缓慢旋转
       bloom.cx += (hand.tip.x - bloom.cx) * 0.12;
       bloom.cy += (hand.tip.y - bloom.cy) * 0.12;
-      bloom.grow = Math.min(1, bloom.grow + 0.011);
+      bloom.grow = Math.min(1, bloom.grow + 0.013);
       bloom.rot += 0.0018;
       for (const p of ps.parts) {
         if (!p.seed) continue;

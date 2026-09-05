@@ -167,6 +167,16 @@ function particleFrame(f) {
   }
   const eff = EFFECTS[g];
   if (eff && eff.onFrame && hand) eff.onFrame(hand, ps);
+
+  // 花朵页氛围：漂浮的微光星尘
+  if (window.__FLOWER_ONLY && Math.random() < 0.5 && ps.count < 3000) {
+    ps.spawn({
+      x: Math.random() * pad.w, y: Math.random() * pad.h,
+      vx: (Math.random() - 0.5) * 6, vy: -3 - Math.random() * 6,
+      life: 4 + Math.random() * 3, size: 0.7 + Math.random() * 0.8,
+      color: "#9fc7ff", gravity: 0, drag: 1,
+    });
+  }
 }
 
 // 粒子模式渲染循环：统一在这里做物理更新与绘制（无手时也保持画面活着）
@@ -180,7 +190,7 @@ function particleLoop() {
     ? { x: lastHand.palm.x, y: lastHand.palm.y, vx: lastHand.vel.x, vy: lastHand.vel.y, r: CONFIG.particles.handDragRadius, strength: CONFIG.particles.handDragStrength }
     : null;
   ps.update(dt, wind);
-  ps.render((ctx) => { if (lastHand) drawHud(ctx, lastHand); });
+  ps.render((ctx) => { if (lastHand && !window.__FLOWER_ONLY) drawHud(ctx, lastHand); });
 
   hint.classList.toggle("hidden", !!lastHand);
   if (camStatus && ++frameTick % 30 === 0) {
@@ -207,10 +217,12 @@ function drawHud(ctx, hand) {
   }
   ctx.setLineDash([]);
   const wrist = P(0), midTip = P(12);
-  ctx.font = '11px Consolas, "Cascadia Code", monospace';
-  ctx.fillStyle = "rgba(255, 180, 84, .9)";
-  // 读数标注放在手腕附近，避免压住花心等画面主体
-  ctx.fillText(`SIZE:${Math.round(hand.size * 100)}`, wrist.x + 12, wrist.y + 16);
+  if (!window.__FLOWER_ONLY) {
+    ctx.font = '11px Consolas, "Cascadia Code", monospace';
+    ctx.fillStyle = "rgba(255, 180, 84, .9)";
+    // 读数标注放在手腕附近，避免压住花心等画面主体
+    ctx.fillText(`SIZE:${Math.round(hand.size * 100)}`, wrist.x + 12, wrist.y + 16);
+  }
   ctx.restore();
 }
 
@@ -548,7 +560,8 @@ const btnClearEl = $("#btnClear");
 if (btnClearEl) btnClearEl.addEventListener("click", () => { pad.clear(); ps.killAll(0); showToast("已清空"); });
 const btnSaveEl = $("#btnSave");
 if (btnSaveEl) btnSaveEl.addEventListener("click", () => pad.exportPNG());
-$("#btnDemo").addEventListener("click", startDemo);
+const btnDemoEl = $("#btnDemo");
+if (btnDemoEl) btnDemoEl.addEventListener("click", startDemo);
 $("#btnCam").addEventListener("click", startCamera);
 const btnModeGalaxyEl = $("#btnModeGalaxy");
 if (btnModeGalaxyEl) btnModeGalaxyEl.addEventListener("click", () => setRenderMode("galaxy"));

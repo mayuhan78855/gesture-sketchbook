@@ -34,7 +34,7 @@ export const CONFIG = {
 
   // ---------- 粒子系统（粒子模式）----------
   particles: {
-    max: 2600,             // 同屏最大粒子数（低配电脑调低到 1200）
+    max: 4200,             // 同屏最大粒子数（低配电脑调低到 2000）
     streamPerFrame: 6,     // 绘制流：每帧从指尖喷出的粒子数
     fountainPerFrame: 9,   // 离子喷泉：每帧喷射数
     burstCount: 240,       // 能量爆发：一次爆发的粒子数
