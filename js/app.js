@@ -203,6 +203,7 @@ function particleFrame(f) {
 function particleLoop() {
   if (renderMode !== "particles") return;
   const now = performance.now();
+  if (loopT && now - loopT < 14) { _raf = requestAnimationFrame(particleLoop); return; } // ~60fps 上限（高刷屏减负）
   const dt = Math.min(0.05, (now - (loopT || now)) / 1000);
   loopT = now;
 
@@ -257,7 +258,8 @@ function spaceFrame(f) {
 function spaceLoop() {
   if (renderMode !== "space3d" || !space3d) return;
   const now = performance.now();
-  const dt = Math.min(0.05, (now - (loopT || now)) / 1000);
+  if (loopT && now - loopT < 14) { _raf = requestAnimationFrame(spaceLoop); return; } // ~60fps 上限（高刷屏减负）
+  const dt = Math.min(0.05, (now - loopT) / 1000);
   loopT = now;
   space3d.update(dt, lastHand, lastGesture);
   space3d.render();
@@ -315,6 +317,7 @@ function galaxyFrame(f) {
 function galaxyLoop() {
   if (renderMode !== "galaxy" || !galaxy) return;
   const now = performance.now();
+  if (loopT && now - loopT < 14) { _raf = requestAnimationFrame(galaxyLoop); return; } // ~60fps 上限（高刷屏减负）
   const dt = Math.min(0.05, (now - (loopT || now)) / 1000);
   loopT = now;
   galaxy.update(dt, lastHand, lastGesture);
@@ -613,6 +616,10 @@ if (btnModeInkEl) btnModeInkEl.addEventListener("click", () => setRenderMode("in
 if (constrToggle) constrToggle.addEventListener("change", () => {
   pad.construction = constrToggle.checked;
   pad.dirty = true;
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (demo) demo.hold = document.hidden; // 后台时暂停演示时间轴（rAF 循环本就自动暂停）
 });
 
 document.addEventListener("keydown", (e) => {

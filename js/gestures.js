@@ -126,14 +126,14 @@ export class GestureEngine {
 
     // ---- 2. 加载 MediaPipe 模型（懒加载 CDN 库，网络抖动自动重试；GPU 失败降级 CPU）----
     const loadLib = async () => {
-      let lib = null;
-      for (let i = 0; i < 3; i++) {
-        try {
-          lib = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
-          break;
-        } catch (e) { lib = null; await new Promise((r) => setTimeout(r, 1500)); }
+      // 本地 vendor 优先（彻底离线），jsdelivr 兑底
+      const sources = [new URL("../vendor/vision_bundle.mjs", import.meta.url).href, "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs"];
+      let lib = null, lastErr = null;
+      for (const src of sources) {
+        try { lib = await import(src); break; }
+        catch (e) { lib = null; lastErr = e; await new Promise((r) => setTimeout(r, 1200)); }
       }
-      if (!lib) throw new Error("vision_bundle 加载失败");
+      if (!lib) throw (lastErr || new Error("vision_bundle 加载失败"));
       return lib;
     };
     // ---- 2. 加载 MediaPipe 模型：页面打开时已预载（带进度），此处直接用缓冲；
