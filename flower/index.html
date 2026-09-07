@@ -1314,12 +1314,18 @@ class DemoHand {
     if (this._running) return;
     this._running = true;
     this._prev = performance.now();
-    this._timer = setInterval(() => this._tick(), 33);
+    // 用 rAF 驱动时间轴：与显示器垂直同步、后台标签自动暂停（省 CPU）
+    const loop = () => {
+      if (!this._running) return;
+      this._tick();
+      this._raf = requestAnimationFrame(loop);
+    };
+    this._raf = requestAnimationFrame(loop);
   }
 
   stop() {
     this._running = false;
-    clearInterval(this._timer);
+    if (this._raf) cancelAnimationFrame(this._raf);
   }
 
   _tick() {
@@ -1399,8 +1405,12 @@ class Space3D {
   }
 
   async init() {
+    if (this.ready) return; // 防重入
     const THREE = await loadTHREE();
     const S = CONFIG.space;
+    // 低配降档
+    const LOWEND = (navigator.hardwareConcurrency || 4) <= 4;
+    if (LOWEND) S.count = Math.round(S.count * 0.5);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true });
     this.renderer.setClearColor(0x000000, 0);
@@ -1465,6 +1475,16 @@ class Space3D {
 
     this._resize();
     this.ready = true;
+  }
+
+  /** 释放全部 GPU 资源 */
+  dispose() {
+    this.ready = false;
+    this.scene.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+    });
+    if (this.renderer) this.renderer.dispose();
   }
 
   _resize() {
@@ -1630,9 +1650,14 @@ class Galaxy3D {
   }
 
   async init() {
+    if (this.ready) return; // 防重入
     const THREE = await loadTHREEGalaxy();
     const G = CONFIG.galaxy;
     this.THREE = THREE; // 供 init 之外的方法使用（Vector3 等）
+    // 低配降档：星场/太阳粒子数减半
+    const LOWEND = (navigator.hardwareConcurrency || 4) <= 4;
+    const starsN = LOWEND ? Math.round(G.stars * 0.5) : G.stars;
+    const sunN = LOWEND ? Math.round(4000 * 0.5) : 4000;
     this.THREE = THREE;
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true });
@@ -1649,7 +1674,7 @@ class Galaxy3D {
     this.scene.add(sun);
 
     // ---- 银河系粒子背景：3 条旋臂 + 中心核球 + 零散晕星 ----
-    const N = G.stars;
+    const N = starsN;
     this.count = N;
     const pos = new Float32Array(N * 3);
     const col = new Float32Array(N * 3);
@@ -1757,6 +1782,16 @@ class Galaxy3D {
     this.camera.position.set(0, 7.5, 14.5);
     this.camera.lookAt(0, 0, 0);
     this.ready = true;
+  }
+
+  /** 释放全部 GPU 资源（切模式/重初始化前调用） */
+  dispose() {
+    this.ready = false;
+    this.scene.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+    });
+    if (this.renderer) this.renderer.dispose();
   }
 
   _resize() {
@@ -2180,6 +2215,15 @@ class GestureEngine {
 
 
 
+// 低配设备降档：逻辑核 ≤4 视为低配（3D/2D 粒子预算在各自模块里同样生效）
+const LOWEND = (navigator.hardwareConcurrency || 4) <= 4;
+window.__LOWEND = LOWEND;
+
+// Service Worker：把模型/wasm 等大文件永久缓存，线上第二次打开秒开（仅 https 生效）
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  const swUrl = location.pathname.includes("/flower/") || location.pathname.includes("/galaxy/") ? "../sw.js" : "sw.js";
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
 
 
 
@@ -2201,10 +2245,12 @@ const swatchesEl = $("#swatches");
 const constrToggle = $("#constrToggle");
 const legendEl = document.querySelector(".legend");
 
+if (LOWEND) CONFIG.particles.max = Math.round(CONFIG.particles.max * 0.55);
 const pad = new SketchPad(canvas);
 const ps = new ParticleSystem(canvas);
 
 const modeParam = new URLSearchParams(location.search).get("mode");
+
 // 页面强制模式（flower/ 与 galaxy/ 独立页用）> URL 参数 > 默认银河星旅
 const VALID_MODES = ["ink", "particles", "space3d", "galaxy"];
 let renderMode = window.__FORCE_MODE || modeParam || "galaxy";
@@ -2451,6 +2497,8 @@ async function enterSpace() {
       });
       renderMode = "particles";
       syncModeButtons(); buildLegend();
+      if (space3d && space3d.dispose) space3d.dispose();
+      space3d = null;
       pad._resize(); ps._resize(); particleLoop();
       applyModeVisuals();
       return;
@@ -2526,6 +2574,8 @@ async function enterGalaxy() {
       });
       renderMode = "particles";
       syncModeButtons(); buildLegend();
+      if (galaxy && galaxy.dispose) galaxy.dispose();
+      galaxy = null;
       pad._resize(); ps._resize(); particleLoop();
       applyModeVisuals();
       return;
@@ -2816,7 +2866,7 @@ if (renderMode === "particles") {
 }
 applyModeVisuals();
 
-onModelProgress((p) => setStatus(`正在加载识别模型… ${p}%`, "loading"));
+onModelProgress((p) => { if (mode === "camera") setStatus(`正在加载识别模型… ${p}%`, "loading"); });
 preloadModel().catch(() => {}); // 页面一打开就开始下载模型（与摄像头授权并行）
 
 const params = new URLSearchParams(location.search);

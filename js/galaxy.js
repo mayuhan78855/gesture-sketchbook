@@ -48,9 +48,14 @@ export class Galaxy3D {
   }
 
   async init() {
+    if (this.ready) return; // 防重入
     const THREE = await loadTHREEGalaxy();
     const G = CONFIG.galaxy;
     this.THREE = THREE; // 供 init 之外的方法使用（Vector3 等）
+    // 低配降档：星场/太阳粒子数减半
+    const LOWEND = (navigator.hardwareConcurrency || 4) <= 4;
+    const starsN = LOWEND ? Math.round(G.stars * 0.5) : G.stars;
+    const sunN = LOWEND ? Math.round(4000 * 0.5) : 4000;
     this.THREE = THREE;
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true });
@@ -67,7 +72,7 @@ export class Galaxy3D {
     this.scene.add(sun);
 
     // ---- 银河系粒子背景：3 条旋臂 + 中心核球 + 零散晕星 ----
-    const N = G.stars;
+    const N = starsN;
     this.count = N;
     const pos = new Float32Array(N * 3);
     const col = new Float32Array(N * 3);
@@ -175,6 +180,16 @@ export class Galaxy3D {
     this.camera.position.set(0, 7.5, 14.5);
     this.camera.lookAt(0, 0, 0);
     this.ready = true;
+  }
+
+  /** 释放全部 GPU 资源（切模式/重初始化前调用） */
+  dispose() {
+    this.ready = false;
+    this.scene.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+    });
+    if (this.renderer) this.renderer.dispose();
   }
 
   _resize() {

@@ -8,6 +8,16 @@
 
 import { CONFIG, GESTURE_INFO } from "./config.js";
 import { GestureEngine, preloadModel, onModelProgress } from "./gestures.js";
+
+// 低配设备降档：逻辑核 ≤4 视为低配（3D/2D 粒子预算在各自模块里同样生效）
+const LOWEND = (navigator.hardwareConcurrency || 4) <= 4;
+window.__LOWEND = LOWEND;
+
+// Service Worker：把模型/wasm 等大文件永久缓存，线上第二次打开秒开（仅 https 生效）
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  const swUrl = location.pathname.includes("/flower/") || location.pathname.includes("/galaxy/") ? "../sw.js" : "sw.js";
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
 import { SketchPad } from "./sketch.js";
 import { ParticleSystem } from "./particles.js";
 import { EFFECTS } from "./effects.js";
@@ -30,10 +40,12 @@ const swatchesEl = $("#swatches");
 const constrToggle = $("#constrToggle");
 const legendEl = document.querySelector(".legend");
 
+if (LOWEND) CONFIG.particles.max = Math.round(CONFIG.particles.max * 0.55);
 const pad = new SketchPad(canvas);
 const ps = new ParticleSystem(canvas);
 
 const modeParam = new URLSearchParams(location.search).get("mode");
+
 // 页面强制模式（flower/ 与 galaxy/ 独立页用）> URL 参数 > 默认银河星旅
 const VALID_MODES = ["ink", "particles", "space3d", "galaxy"];
 let renderMode = window.__FORCE_MODE || modeParam || "galaxy";
@@ -280,6 +292,8 @@ async function enterSpace() {
       });
       renderMode = "particles";
       syncModeButtons(); buildLegend();
+      if (space3d && space3d.dispose) space3d.dispose();
+      space3d = null;
       pad._resize(); ps._resize(); particleLoop();
       applyModeVisuals();
       return;
@@ -355,6 +369,8 @@ async function enterGalaxy() {
       });
       renderMode = "particles";
       syncModeButtons(); buildLegend();
+      if (galaxy && galaxy.dispose) galaxy.dispose();
+      galaxy = null;
       pad._resize(); ps._resize(); particleLoop();
       applyModeVisuals();
       return;
@@ -645,7 +661,7 @@ if (renderMode === "particles") {
 }
 applyModeVisuals();
 
-onModelProgress((p) => setStatus(`正在加载识别模型… ${p}%`, "loading"));
+onModelProgress((p) => { if (mode === "camera") setStatus(`正在加载识别模型… ${p}%`, "loading"); });
 preloadModel().catch(() => {}); // 页面一打开就开始下载模型（与摄像头授权并行）
 
 const params = new URLSearchParams(location.search);

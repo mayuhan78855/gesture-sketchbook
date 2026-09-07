@@ -137,14 +137,13 @@ try {
     await page.waitForTimeout(1500);
     await page.screenshot({ path: path.join(root, "assets/screenshots/demo-galaxy-overview.png") });
     await page.waitForFunction(() => window.__app.lastGesture === "Thumb_Index", { timeout: 20000 });
-    await page.waitForTimeout(3000);
-    const st = await page.evaluate(() => window.__app.galaxy.state);
-    ok("捏合跃迁：抵达行星", st === "arrived", st);
+    // 等待跃迁完成（不用固定时长，避免无头浏览器 rAF 节流导致的时序漂移）
+    await page.waitForFunction(() => window.__app.galaxy.state === "arrived", { timeout: 15000 });
+    ok("捏合跃迁：抵达行星", true);
     await page.screenshot({ path: path.join(root, "assets/screenshots/demo-galaxy-arrive.png") });
     await page.waitForFunction(() => window.__app.lastGesture === "None", { timeout: 15000 });
-    await page.waitForTimeout(2600);
-    const st2 = await page.evaluate(() => window.__app.galaxy.state);
-    ok("返回银河全景", st2 === "overview", st2);
+    await page.waitForFunction(() => window.__app.galaxy.state === "overview", { timeout: 15000 });
+    ok("返回银河全景", true);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     ok("桌面无横向溢出", overflow <= 0, `overflow=${overflow}px`);
     await page.close();

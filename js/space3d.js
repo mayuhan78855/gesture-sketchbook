@@ -37,8 +37,12 @@ export class Space3D {
   }
 
   async init() {
+    if (this.ready) return; // 防重入
     const THREE = await loadTHREE();
     const S = CONFIG.space;
+    // 低配降档
+    const LOWEND = (navigator.hardwareConcurrency || 4) <= 4;
+    if (LOWEND) S.count = Math.round(S.count * 0.5);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true });
     this.renderer.setClearColor(0x000000, 0);
@@ -103,6 +107,16 @@ export class Space3D {
 
     this._resize();
     this.ready = true;
+  }
+
+  /** 释放全部 GPU 资源 */
+  dispose() {
+    this.ready = false;
+    this.scene.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+    });
+    if (this.renderer) this.renderer.dispose();
   }
 
   _resize() {

@@ -130,12 +130,18 @@ export class DemoHand {
     if (this._running) return;
     this._running = true;
     this._prev = performance.now();
-    this._timer = setInterval(() => this._tick(), 33);
+    // 用 rAF 驱动时间轴：与显示器垂直同步、后台标签自动暂停（省 CPU）
+    const loop = () => {
+      if (!this._running) return;
+      this._tick();
+      this._raf = requestAnimationFrame(loop);
+    };
+    this._raf = requestAnimationFrame(loop);
   }
 
   stop() {
     this._running = false;
-    clearInterval(this._timer);
+    if (this._raf) cancelAnimationFrame(this._raf);
   }
 
   _tick() {
