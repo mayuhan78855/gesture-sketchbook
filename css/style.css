@@ -147,6 +147,7 @@ body.single .stage { padding: 0; }
 body.single .paper-wrap { position: fixed; inset: 0; border: none; min-height: 100vh; }
 body.single .side { display: none; }
 body.single .foot { position: fixed; bottom: 10px; left: 0; right: 0; background: transparent; border-top: none; opacity: .55; z-index: 6; }
+.gstatus { position: fixed; left: 16px; bottom: 42px; font: 11px Consolas, monospace; letter-spacing: .08em; color: #6b7f94; z-index: 6; }
 .float-ctl { position: fixed; right: 16px; bottom: 42px; display: flex; gap: 8px; z-index: 6; }
 .float-ctl .btn { flex: none; background: rgba(7, 11, 18, .7); font-size: 11px; padding: 6px 12px; }
 
@@ -393,5 +394,6 @@ body.space-mode::after { display: none; }
   .side .card { flex: 1 1 240px; }
   .paper-wrap { min-height: 52vh; }
 }
+
 
 

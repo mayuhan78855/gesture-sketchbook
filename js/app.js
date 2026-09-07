@@ -7,7 +7,7 @@
 // ============================================================
 
 import { CONFIG, GESTURE_INFO } from "./config.js";
-import { GestureEngine } from "./gestures.js";
+import { GestureEngine, preloadModel, onModelProgress } from "./gestures.js";
 import { SketchPad } from "./sketch.js";
 import { ParticleSystem } from "./particles.js";
 import { EFFECTS } from "./effects.js";
@@ -62,6 +62,8 @@ const GLYPHS = {
 
 // ---------- 小工具 ----------
 function setStatus(text, kind = "idle") {
+  const gstat = $("#galaxyStatus");
+  if (gstat) gstat.textContent = text; // 银河独立页的角落状态行
   if (!chip) return; // 独立页没有状态灯
   chip.textContent = text;
   chip.dataset.kind = kind;
@@ -642,6 +644,9 @@ if (renderMode === "particles") {
   enterGalaxy();
 }
 applyModeVisuals();
+
+onModelProgress((p) => setStatus(`正在加载识别模型… ${p}%`, "loading"));
+preloadModel().catch(() => {}); // 页面一打开就开始下载模型（与摄像头授权并行）
 
 const params = new URLSearchParams(location.search);
 if (params.get("demo") === "1") {

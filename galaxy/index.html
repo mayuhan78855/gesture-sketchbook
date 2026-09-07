@@ -155,6 +155,7 @@ body.single .stage { padding: 0; }
 body.single .paper-wrap { position: fixed; inset: 0; border: none; min-height: 100vh; }
 body.single .side { display: none; }
 body.single .foot { position: fixed; bottom: 10px; left: 0; right: 0; background: transparent; border-top: none; opacity: .55; z-index: 6; }
+.gstatus { position: fixed; left: 16px; bottom: 42px; font: 11px Consolas, monospace; letter-spacing: .08em; color: #6b7f94; z-index: 6; }
 .float-ctl { position: fixed; right: 16px; bottom: 42px; display: flex; gap: 8px; z-index: 6; }
 .float-ctl .btn { flex: none; background: rgba(7, 11, 18, .7); font-size: 11px; padding: 6px 12px; }
 
@@ -404,6 +405,7 @@ body.space-mode::after { display: none; }
 
 
 
+
 </style>
 </head>
 <body class="single single-galaxy space-mode">
@@ -428,6 +430,7 @@ body.space-mode::after { display: none; }
   <video id="cam" class="media-src" autoplay playsinline muted></video>
   <div id="camStatus" class="media-src"></div>
 
+  <div id="galaxyStatus" class="gstatus">正在启动…</div>
   <script type="module">
 /* ==== js/config.js ==== */
 // ============================================================
@@ -1593,10 +1596,10 @@ class Space3D {
 
 const PLANETS = [
   { name: "水星", en: "MERCURY", color: 0x9c8f84, r: 0.30, dist: 6.5,  y: 0.8,  blurb: "离太阳最近的疾行者" },
-  { name: "金星", en: "VENUS",   color: 0xd9b47f, r: 0.46, dist: 8.4,  y: -0.6, blurb: "黎明与黄昏之星" },
+  { name: "金星", en: "VENUS",   color: 0xe8ddc0, r: 0.46, dist: 8.4,  y: -0.6, blurb: "黎明与黄昏之星" },
   { name: "火星", en: "MARS",    color: 0xc25538, r: 0.38, dist: 10.0, y: 1.4,  blurb: "红色荒漠世界" },
-  { name: "木星", en: "JUPITER", color: 0xc8a06e, r: 0.92, dist: 12.2, y: -1.2, blurb: "气态巨行星之王" },
-  { name: "土星", en: "SATURN",  color: 0xd8bd8a, r: 0.78, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: true },
+  { name: "木星", en: "JUPITER", color: 0xd8a565, r: 0.92, dist: 12.2, y: -1.2, blurb: "气态巨行星之王" },
+  { name: "土星", en: "SATURN",  color: 0xe8cf96, r: 0.78, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: true },
   { name: "天王星", en: "URANUS", color: 0x7fd4d9, r: 0.55, dist: 16.0, y: -1.6, blurb: "躺着自转的冰巨星" },
   { name: "海王星", en: "NEPTUNE", color: 0x4f7fe0, r: 0.52, dist: 17.6, y: 1.1,  blurb: "风暴与深蓝" },
 ];
@@ -1692,13 +1695,13 @@ class Galaxy3D {
     this.scene.add(this.galaxyPoints);
 
     // ---- 太阳：1400 颗金色粒子聚成的发光恒星（自转 + 脉动）----
-    const SN = 4000;
+    const SN = 10000;
     const sunPos = new Float32Array(SN * 3);
     const sunCol = new Float32Array(SN * 3);
     const cHot = new THREE.Color("#fff3c4"), cMid = new THREE.Color("#ffd25c"), cEdge = new THREE.Color("#ff9a3c");
     for (let i = 0; i < SN; i++) {
       // 中心密集、边缘稀疏的球体分布
-      const rr = Math.pow(Math.random(), 1.8) * 1.12;
+      const rr = Math.pow(Math.random(), 2.6) * 0.78;
       const th = Math.random() * Math.PI * 2;
       const ph = Math.acos(2 * Math.random() - 1);
       sunPos[i * 3] = rr * Math.sin(ph) * Math.cos(th);
@@ -1711,14 +1714,10 @@ class Galaxy3D {
     sunGeo.setAttribute("position", new THREE.BufferAttribute(sunPos, 3));
     sunGeo.setAttribute("color", new THREE.BufferAttribute(sunCol, 3));
     this.sun = new THREE.Points(sunGeo, new THREE.PointsMaterial({
-      size: 0.038, vertexColors: true, transparent: true, opacity: 0.95,
+      size: 0.03, vertexColors: true, transparent: true, opacity: 0.98,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
     }));
-    this.sunHalo = new THREE.Mesh(
-      new THREE.SphereGeometry(1.5, 32, 24),
-      new THREE.MeshBasicMaterial({ color: 0xffd25c, transparent: true, opacity: 0.22, side: THREE.BackSide })
-    );
-    this.scene.add(this.sun, this.sunHalo);
+    this.scene.add(this.sun);
 
     // ---- 行星轨道线：淡淡的圆环，让“行星绕太阳”一眼可读 ----
     for (const p of PLANETS) {
@@ -1854,11 +1853,8 @@ class Galaxy3D {
       this.camera.lookAt(this.lookTarget);
     }
 
-    // ---- 太阳自转与脉动 ----
-    this.sun.rotation.y += dt * 0.12;
-    const pulse = 1 + Math.sin(this._time * 2.2) * 0.05;
-    this.sunHalo.scale.setScalar(pulse);
-    this.sunHalo.material.opacity = 0.2 + Math.sin(this._time * 2.2) * 0.05;
+    // ---- 太阳自转（无实体光圈，全粒子构成）----
+    this.sun.rotation.y += dt * 0.1;
 
     // ---- 行星标签投影（2D HUD 用）----
     this.labels = this.planets.map((p) => {
@@ -1903,6 +1899,46 @@ class Galaxy3D {
 // 这样演示模式/粒子模式在断网环境下也能正常运行，不依赖 CDN。
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+// ---- 模型资源：本地 vendor 路径 + 会话级缓冲 + 带进度下载 ----
+const LOCAL_WASM = new URL("../vendor/wasm/", import.meta.url).href;
+const LOCAL_MODEL = new URL("../vendor/gesture_recognizer.task", import.meta.url).href;
+const modelBuffers = {};   // 已下载的模型缓冲（页面会话内复用，重试秒级完成）
+let modelProgressCb = null; // 外部可注册的进度回调
+
+function onModelProgress(cb) { modelProgressCb = cb; }
+
+async function fetchWithProgress(url, onProgress) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const total = Number(res.headers.get("content-length")) || 0;
+  if (!res.body) return new Uint8Array(await res.arrayBuffer());
+  const reader = res.body.getReader();
+  const chunks = [];
+  let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value); got += value.length;
+    if (onProgress && total) onProgress(Math.min(99, Math.round((got / total) * 100)));
+  }
+  const all = new Uint8Array(got);
+  let off = 0;
+  for (const c of chunks) { all.set(c, off); off += c.length; }
+  if (onProgress) onProgress(100);
+  return all;
+}
+
+/** 页面一打开就调用：提前下载模型与 wasm（和摄像头授权并行，不再串行等待） */
+export async function preloadModel() {
+  const p = fetchWithProgress(LOCAL_MODEL, (pct) => { if (modelProgressCb) modelProgressCb(pct); })
+    .then((buf) => { modelBuffers[LOCAL_MODEL] = buf; })
+    .catch(() => {});
+  // 预热 wasm（填 HTTP 缓存，FilesetResolver 再取时秒回）
+  fetch(LOCAL_WASM + "vision_wasm_internal.js").catch(() => {});
+  fetch(LOCAL_WASM + "vision_wasm_internal.wasm").catch(() => {});
+  await p;
+}
 
 // 把 navigator.mediaDevices 的报错翻译成给新手的友好提示
 function cameraErrorMessage(err) {
@@ -1989,12 +2025,11 @@ class GestureEngine {
       if (!lib) throw new Error("vision_bundle 加载失败");
       return lib;
     };
-    // ---- 2. 加载 MediaPipe 模型：本地 vendor 优先（离线可用）→ Google CDN 兑底；GPU 失败降级 CPU ----
-    const LOCAL_WASM = new URL("../vendor/wasm/", import.meta.url).href;
-    const LOCAL_MODEL = new URL("../vendor/gesture_recognizer.task", import.meta.url).href;
+    // ---- 2. 加载 MediaPipe 模型：页面打开时已预载（带进度），此处直接用缓冲；
+    //      本地 vendor 优先（离线可用）→ Google CDN 兑底；GPU 失败降级 CPU ----
     const sources = [
-      { wasm: LOCAL_WASM, model: LOCAL_MODEL, label: "本地" },
-      { wasm: CONFIG.wasmCDN, model: CONFIG.modelURL, label: "CDN" },
+      { wasm: LOCAL_WASM, model: LOCAL_MODEL },
+      { wasm: CONFIG.wasmCDN, model: CONFIG.modelURL },
     ];
     let loaded = false;
     for (const src of sources) {
@@ -2002,7 +2037,14 @@ class GestureEngine {
         try {
           const lib = await loadLib();
           const vision = await lib.FilesetResolver.forVisionTasks(src.wasm);
-          this.recognizer = await this._create(lib, vision, src.model, delegate);
+          let buf = modelBuffers[src.model];
+          if (!buf) {
+            buf = await fetchWithProgress(src.model, (p) => {
+              this.cb.onStatus(`正在加载识别模型… ${p}%`, "loading");
+            });
+            modelBuffers[src.model] = buf;
+          }
+          this.recognizer = await this._create(lib, vision, buf, delegate);
           loaded = true;
           break;
         } catch (e) {
@@ -2028,9 +2070,9 @@ class GestureEngine {
     return true;
   }
 
-  _create(lib, vision, modelURL, delegate) {
+  _create(lib, vision, modelBuf, delegate) {
     return lib.GestureRecognizer.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: modelURL, delegate },
+      baseOptions: { modelAssetBuffer: modelBuf, delegate },
       runningMode: "VIDEO",
       numHands: 1,
       minHandDetectionConfidence: 0.5,
@@ -2191,6 +2233,8 @@ const GLYPHS = {
 
 // ---------- 小工具 ----------
 function setStatus(text, kind = "idle") {
+  const gstat = $("#galaxyStatus");
+  if (gstat) gstat.textContent = text; // 银河独立页的角落状态行
   if (!chip) return; // 独立页没有状态灯
   chip.textContent = text;
   chip.dataset.kind = kind;
@@ -2771,6 +2815,9 @@ if (renderMode === "particles") {
   enterGalaxy();
 }
 applyModeVisuals();
+
+onModelProgress((p) => setStatus(`正在加载识别模型… ${p}%`, "loading"));
+preloadModel().catch(() => {}); // 页面一打开就开始下载模型（与摄像头授权并行）
 
 const params = new URLSearchParams(location.search);
 if (params.get("demo") === "1") {

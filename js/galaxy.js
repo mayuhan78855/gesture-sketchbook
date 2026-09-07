@@ -14,10 +14,10 @@ import { CONFIG } from "./config.js";
 
 const PLANETS = [
   { name: "水星", en: "MERCURY", color: 0x9c8f84, r: 0.30, dist: 6.5,  y: 0.8,  blurb: "离太阳最近的疾行者" },
-  { name: "金星", en: "VENUS",   color: 0xd9b47f, r: 0.46, dist: 8.4,  y: -0.6, blurb: "黎明与黄昏之星" },
+  { name: "金星", en: "VENUS",   color: 0xe8ddc0, r: 0.46, dist: 8.4,  y: -0.6, blurb: "黎明与黄昏之星" },
   { name: "火星", en: "MARS",    color: 0xc25538, r: 0.38, dist: 10.0, y: 1.4,  blurb: "红色荒漠世界" },
-  { name: "木星", en: "JUPITER", color: 0xc8a06e, r: 0.92, dist: 12.2, y: -1.2, blurb: "气态巨行星之王" },
-  { name: "土星", en: "SATURN",  color: 0xd8bd8a, r: 0.78, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: true },
+  { name: "木星", en: "JUPITER", color: 0xd8a565, r: 0.92, dist: 12.2, y: -1.2, blurb: "气态巨行星之王" },
+  { name: "土星", en: "SATURN",  color: 0xe8cf96, r: 0.78, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: true },
   { name: "天王星", en: "URANUS", color: 0x7fd4d9, r: 0.55, dist: 16.0, y: -1.6, blurb: "躺着自转的冰巨星" },
   { name: "海王星", en: "NEPTUNE", color: 0x4f7fe0, r: 0.52, dist: 17.6, y: 1.1,  blurb: "风暴与深蓝" },
 ];
@@ -113,13 +113,13 @@ export class Galaxy3D {
     this.scene.add(this.galaxyPoints);
 
     // ---- 太阳：1400 颗金色粒子聚成的发光恒星（自转 + 脉动）----
-    const SN = 4000;
+    const SN = 10000;
     const sunPos = new Float32Array(SN * 3);
     const sunCol = new Float32Array(SN * 3);
     const cHot = new THREE.Color("#fff3c4"), cMid = new THREE.Color("#ffd25c"), cEdge = new THREE.Color("#ff9a3c");
     for (let i = 0; i < SN; i++) {
       // 中心密集、边缘稀疏的球体分布
-      const rr = Math.pow(Math.random(), 1.8) * 1.12;
+      const rr = Math.pow(Math.random(), 2.6) * 0.78;
       const th = Math.random() * Math.PI * 2;
       const ph = Math.acos(2 * Math.random() - 1);
       sunPos[i * 3] = rr * Math.sin(ph) * Math.cos(th);
@@ -132,14 +132,10 @@ export class Galaxy3D {
     sunGeo.setAttribute("position", new THREE.BufferAttribute(sunPos, 3));
     sunGeo.setAttribute("color", new THREE.BufferAttribute(sunCol, 3));
     this.sun = new THREE.Points(sunGeo, new THREE.PointsMaterial({
-      size: 0.038, vertexColors: true, transparent: true, opacity: 0.95,
+      size: 0.03, vertexColors: true, transparent: true, opacity: 0.98,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
     }));
-    this.sunHalo = new THREE.Mesh(
-      new THREE.SphereGeometry(1.5, 32, 24),
-      new THREE.MeshBasicMaterial({ color: 0xffd25c, transparent: true, opacity: 0.22, side: THREE.BackSide })
-    );
-    this.scene.add(this.sun, this.sunHalo);
+    this.scene.add(this.sun);
 
     // ---- 行星轨道线：淡淡的圆环，让“行星绕太阳”一眼可读 ----
     for (const p of PLANETS) {
@@ -275,11 +271,8 @@ export class Galaxy3D {
       this.camera.lookAt(this.lookTarget);
     }
 
-    // ---- 太阳自转与脉动 ----
-    this.sun.rotation.y += dt * 0.12;
-    const pulse = 1 + Math.sin(this._time * 2.2) * 0.05;
-    this.sunHalo.scale.setScalar(pulse);
-    this.sunHalo.material.opacity = 0.2 + Math.sin(this._time * 2.2) * 0.05;
+    // ---- 太阳自转（无实体光圈，全粒子构成）----
+    this.sun.rotation.y += dt * 0.1;
 
     // ---- 行星标签投影（2D HUD 用）----
     this.labels = this.planets.map((p) => {

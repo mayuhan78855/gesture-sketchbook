@@ -11,6 +11,46 @@ import { CONFIG, GESTURE_INFO } from "./config.js";
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
+// ---- 模型资源：本地 vendor 路径 + 会话级缓冲 + 带进度下载 ----
+const LOCAL_WASM = new URL("../vendor/wasm/", import.meta.url).href;
+const LOCAL_MODEL = new URL("../vendor/gesture_recognizer.task", import.meta.url).href;
+const modelBuffers = {};   // 已下载的模型缓冲（页面会话内复用，重试秒级完成）
+let modelProgressCb = null; // 外部可注册的进度回调
+
+export function onModelProgress(cb) { modelProgressCb = cb; }
+
+async function fetchWithProgress(url, onProgress) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const total = Number(res.headers.get("content-length")) || 0;
+  if (!res.body) return new Uint8Array(await res.arrayBuffer());
+  const reader = res.body.getReader();
+  const chunks = [];
+  let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value); got += value.length;
+    if (onProgress && total) onProgress(Math.min(99, Math.round((got / total) * 100)));
+  }
+  const all = new Uint8Array(got);
+  let off = 0;
+  for (const c of chunks) { all.set(c, off); off += c.length; }
+  if (onProgress) onProgress(100);
+  return all;
+}
+
+/** 页面一打开就调用：提前下载模型与 wasm（和摄像头授权并行，不再串行等待） */
+export async function preloadModel() {
+  const p = fetchWithProgress(LOCAL_MODEL, (pct) => { if (modelProgressCb) modelProgressCb(pct); })
+    .then((buf) => { modelBuffers[LOCAL_MODEL] = buf; })
+    .catch(() => {});
+  // 预热 wasm（填 HTTP 缓存，FilesetResolver 再取时秒回）
+  fetch(LOCAL_WASM + "vision_wasm_internal.js").catch(() => {});
+  fetch(LOCAL_WASM + "vision_wasm_internal.wasm").catch(() => {});
+  await p;
+}
+
 // 把 navigator.mediaDevices 的报错翻译成给新手的友好提示
 export function cameraErrorMessage(err) {
   const name = err && err.name ? err.name : "";
@@ -96,12 +136,11 @@ export class GestureEngine {
       if (!lib) throw new Error("vision_bundle 加载失败");
       return lib;
     };
-    // ---- 2. 加载 MediaPipe 模型：本地 vendor 优先（离线可用）→ Google CDN 兑底；GPU 失败降级 CPU ----
-    const LOCAL_WASM = new URL("../vendor/wasm/", import.meta.url).href;
-    const LOCAL_MODEL = new URL("../vendor/gesture_recognizer.task", import.meta.url).href;
+    // ---- 2. 加载 MediaPipe 模型：页面打开时已预载（带进度），此处直接用缓冲；
+    //      本地 vendor 优先（离线可用）→ Google CDN 兑底；GPU 失败降级 CPU ----
     const sources = [
-      { wasm: LOCAL_WASM, model: LOCAL_MODEL, label: "本地" },
-      { wasm: CONFIG.wasmCDN, model: CONFIG.modelURL, label: "CDN" },
+      { wasm: LOCAL_WASM, model: LOCAL_MODEL },
+      { wasm: CONFIG.wasmCDN, model: CONFIG.modelURL },
     ];
     let loaded = false;
     for (const src of sources) {
@@ -109,7 +148,14 @@ export class GestureEngine {
         try {
           const lib = await loadLib();
           const vision = await lib.FilesetResolver.forVisionTasks(src.wasm);
-          this.recognizer = await this._create(lib, vision, src.model, delegate);
+          let buf = modelBuffers[src.model];
+          if (!buf) {
+            buf = await fetchWithProgress(src.model, (p) => {
+              this.cb.onStatus(`正在加载识别模型… ${p}%`, "loading");
+            });
+            modelBuffers[src.model] = buf;
+          }
+          this.recognizer = await this._create(lib, vision, buf, delegate);
           loaded = true;
           break;
         } catch (e) {
@@ -135,9 +181,9 @@ export class GestureEngine {
     return true;
   }
 
-  _create(lib, vision, modelURL, delegate) {
+  _create(lib, vision, modelBuf, delegate) {
     return lib.GestureRecognizer.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: modelURL, delegate },
+      baseOptions: { modelAssetBuffer: modelBuf, delegate },
       runningMode: "VIDEO",
       numHands: 1,
       minHandDetectionConfidence: 0.5,
