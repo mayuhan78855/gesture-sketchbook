@@ -43,7 +43,10 @@ function makeParticlePlanet(p, THREE, LOWEND, bodyNBase) {
     const y = 1 - (2 * (i + 0.5)) / bodyN;
     const rad = Math.sqrt(Math.max(0, 1 - y * y));
     const phi = i * 2.399963;
-    const c = dark.clone().lerp(bright, clampGalaxy((y + 1) / 2 + (Math.random() - 0.5) * 0.2, 0, 1));
+    // 纬度色带（气巨星条纹感）：在极→赤道渐变上叠加按纬度的明暗条带
+    const band = 0.5 + 0.5 * Math.sin(y * 13 + (Math.random() - 0.5) * 0.7);
+    const grad = clampGalaxy((y + 1) / 2 + (Math.random() - 0.5) * 0.2, 0, 1);
+    const c = dark.clone().lerp(bright, grad * (0.68 + 0.32 * band));
     bpos[i * 3] = Math.cos(phi) * rad * p.r;
     bpos[i * 3 + 1] = y * p.r;
     bpos[i * 3 + 2] = Math.sin(phi) * rad * p.r;
@@ -52,17 +55,12 @@ function makeParticlePlanet(p, THREE, LOWEND, bodyNBase) {
   bodyGeo.setAttribute("position", new THREE.BufferAttribute(bpos, 3));
   bodyGeo.setAttribute("color", new THREE.BufferAttribute(bcol, 3));
   const pointsBody = new THREE.Points(bodyGeo, new THREE.PointsMaterial({
-    size: Math.max(0.03, p.r * 0.07), vertexColors: true, transparent: true, opacity: 0.95,
+    size: Math.max(0.06, p.r * 0.12), vertexColors: true, transparent: true, opacity: 0.95,
     blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
   }));
   group.add(pointsBody);
 
-  // 暗色 core：撑出体积感，避免纯粒子显得空
-  const core = new THREE.Mesh(
-    new THREE.SphereGeometry(p.r * 0.92, 24, 18),
-    new THREE.MeshBasicMaterial({ color: base.clone().multiplyScalar(0.3) })
-  );
-  group.add(core);
+  // （已移除实心 core mesh —— 用户要求纯粒子行星，不要实心填充）
 
   // ---- 光环（土星亮环；木星/天王星/海王星淡环）----
   let pointsRing = null, ringGeo = null;
@@ -332,7 +330,7 @@ export class Galaxy3D {
       // 到达后：环绕行星缓慢特写
       const p = this._arrivedPlanet;
       this._orbitAng += dt * 0.14;
-      const d = p.r * 3.6;
+      const d = p.r * 2.9;
       this.camera.position.set(
         p.pos.x + Math.cos(this._orbitAng) * d,
         p.pos.y + p.r * 1.15,

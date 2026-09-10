@@ -58,7 +58,7 @@ export class Flower3D {
 
     // ---- 点云花：花瓣 / 花芯 / 花茎 / 叶 ----
     const LOW = (navigator.hardwareConcurrency || 4) <= 4;
-    const per = LOW ? 750 : 1500;      // 每片花瓣粒子
+    const per = LOW ? 650 : 1300;      // 每片花瓣粒子
     const total = LOW ? Math.round(11000 / 2) : 11000;
     const group = new THREE.Group();
     const pts = [];
@@ -66,23 +66,29 @@ export class Flower3D {
     const reveal = [];                  // 逐层显现顺序（0=最先，1=最后）
     const push = (x, y, z, r, g, b, rev) => { pts.push(x, y, z); cols.push(r, g, b); reveal.push(rev); };
 
-    // 花瓣：6 片放射状粒子簇（XY 平面朝向相机，外沿卷曲 + 颜色渐隐）
-    const PET = 6;
+    // 花瓣：8 片放射状 3D 杯状粒子簇（叶形宽度 + 边缘上卷 + 整体向相机鼓起，呈立体绽放）
+    const PET = 8;
     for (let k = 0; k < PET; k++) {
-      const baseA = k * ((Math.PI * 2) / PET) + 0.15;
+      const baseA = k * ((Math.PI * 2) / PET) + 0.12;
+      const ca = Math.cos(baseA), sa = Math.sin(baseA);
       for (let i = 0; i < per; i++) {
-        const t = Math.pow(Math.random(), 0.62);              // 沿花瓣位置 0..1
-        const half = 0.34 * Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.05)), 0.85);
-        const a = baseA + (Math.random() - 0.5) * 2 * half;
-        const R = 0.18 + t * 1.42 * (0.9 + Math.random() * 0.2);
-        const x = Math.cos(a) * R, y = Math.sin(a) * R;
-        const z = -0.28 * t * t + (Math.random() - 0.5) * 0.06; // 花瓣外沿后卷
-        // 颜色：根白粉 → 中浅紫 → 边缘渐隐
-        const hue = 318 - t * 52;
-        const sat = 72 + t * 18;
-        const lig = 80 - t * 26 - (Math.random() - 0.5) * 8;
-        const c = new THREE.Color(`hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${clampF(lig, 40, 88).toFixed(0)}%)`);
-        const rev = 0.05 + t * 0.55 + Math.random() * 0.05;     // 逐层显现顺序
+        const u = Math.pow(Math.random(), 0.6);                 // 沿花瓣 0..1（根→尖）
+        const half = 0.32 * Math.sin(Math.PI * Math.min(1, u)) * (0.3 + 0.7 * u); // 叶形：根窄→中宽→尖收
+        const w = (Math.random() * 2 - 1) * half;               // 横向 -1..1
+        const reach = 0.13 + u * 1.5;                            // 径向伸出
+        // 杯状几何：横向边缘上卷、尖端微后卷、整体向相机(+Z)鼓起成穹顶
+        const cup = w * w * 0.85;
+        const tip = u * u * 0.42;
+        const dome = u * 0.35;
+        const x = ca * reach - sa * w;
+        const y = sa * reach + ca * w;
+        const z = cup + tip + dome + (Math.random() - 0.5) * 0.05;
+        // 颜色：根浅粉 → 中玫瑰 → 边缘深玫红（对齐参考视频：粉玫瑰系，非紫蓝）
+        const hue = 348 - u * 28;
+        const sat = 62 + u * 22;
+        const lig = 84 - u * 24 - Math.abs(w) * 10 - (Math.random() - 0.5) * 5;
+        const c = new THREE.Color(`hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${clampF(lig, 44, 92).toFixed(0)}%)`);
+        const rev = 0.05 + u * 0.55 + Math.random() * 0.05;     // 逐层显现顺序
         push(x, y, z, c.r, c.g, c.b, clampF(rev, 0, 1));
       }
     }
@@ -90,7 +96,7 @@ export class Flower3D {
     for (let i = 0; i < (LOW ? 260 : 520); i++) {
       const r = Math.pow(Math.random(), 0.5) * 0.2;
       const a = Math.random() * Math.PI * 2;
-      const c = new THREE.Color(Math.random() < 0.3 ? "#fff6d8" : "#ffcf5c");
+      const c = new THREE.Color(Math.random() < 0.3 ? "#ffe8c4" : "#ffb347");
       push(Math.cos(a) * r, Math.sin(a) * r, 0.06 + Math.random() * 0.08, c.r, c.g, c.b, Math.random() * 0.1);
     }
     // 花茎：沿曲线采样的点（绿）
@@ -100,7 +106,7 @@ export class Flower3D {
       const x = 0.22 * Math.sin(t * 2.4) + (Math.random() - 0.5) * 0.03;
       const y = -0.25 - t * 1.75;
       const z = 0.12 * Math.sin(t * 3.1) + (Math.random() - 0.5) * 0.03;
-      const c = new THREE.Color(`hsl(${(95 + Math.random() * 25).toFixed(0)}, 48%, ${(28 + t * 18).toFixed(0)}%)`);
+      const c = new THREE.Color(`hsl(${(78 + Math.random() * 22).toFixed(0)}, 46%, ${(26 + t * 20).toFixed(0)}%)`);
       push(x, y, z, c.r, c.g, c.b, 0.7 + t * 0.3);
     }
     // 叶：两片椭圆点云
@@ -113,7 +119,7 @@ export class Flower3D {
         const lx = Math.cos(u) * 0.52 * er;
         const lz = Math.sin(u) * 0.16 * er;
         const ly = sy + side * 0.12 + Math.sin(u) * 0.1 * er;
-        const c = new THREE.Color(`hsl(${(100 + Math.random() * 30).toFixed(0)}, 52%, ${(30 + Math.random() * 16).toFixed(0)}%)`);
+        const c = new THREE.Color(`hsl(${(82 + Math.random() * 25).toFixed(0)}, 50%, ${(28 + Math.random() * 16).toFixed(0)}%)`);
         push(lx + 0.3 * side, ly, lz, c.r, c.g, c.b, 0.75 + Math.random() * 0.2);
       }
     }
@@ -137,12 +143,12 @@ export class Flower3D {
     // ---- 几何扫描笼：八面体线框 + 方形底环，缓慢自转 ----
     const cage = new THREE.Group();
     const oct = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.OctahedronGeometry(1.9, 0)),
+      new THREE.EdgesGeometry(new THREE.OctahedronGeometry(1.0, 0)),
       new THREE.LineBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.22 })
     );
     cage.add(oct);
     const box = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(2.1, 2.1, 2.1)),
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.2, 1.2, 1.2)),
       new THREE.LineBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.13 })
     );
     cage.add(box);
@@ -151,7 +157,7 @@ export class Flower3D {
 
     // ---- 扫描平面：半透明青色矩形，沿 Z 往复横扫 ----
     this.scanPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.3, 2.3),
+      new THREE.PlaneGeometry(1.3, 1.3),
       new THREE.MeshBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false })
     );
     this.scene.add(this.scanPlane);
@@ -239,10 +245,12 @@ export class Flower3D {
 
     // ---- 应用变换 ----
     this.flowerGroup.rotation.y = this.rotY + Math.sin(this._time * 0.5) * 0.06;
-    this.flowerGroup.position.set(this.pos.x, this.pos.y, 0);
+    this.flowerGroup.rotation.x = -0.42 + Math.sin(this._time * 0.4) * 0.04; // 略后仰，呈立体绽放（宽扁视角）
+    this.flowerGroup.position.set(this.pos.x, this.pos.y + 0.12, 0);
     const sc = this.scale * (0.55 + 0.45 * this.fade);
     this.flowerGroup.scale.setScalar(sc);
-    this.cageGroup.scale.setScalar(this.cage * this.scale);
+    this.cageGroup.position.set(this.pos.x, this.pos.y, 0);
+    this.cageGroup.scale.setScalar(this.cage * this.scale * 0.55);
     this.cageGroup.rotation.y += dt * 0.35;
     this.cageGroup.rotation.x = Math.sin(this._time * 0.4) * 0.15;
     this.scanPlane.position.z = Math.sin(this.scanT) * 1.25;

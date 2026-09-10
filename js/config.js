@@ -57,7 +57,7 @@ export const CONFIG = {
   galaxy: {
     stars: 9000,         // 银河背景星数（低配电脑调低到 5000）
     travelDur: 2.2,      // 跃迁飞行时长（秒）
-    planetBody: 1500,    // 每颗行星球壳粒子数（低配自动减半）
+    planetBody: 3500,    // 每颗行星球壳粒子数（低配自动减半）
   },
 
   // MediaPipe 模型/wasm：已本地化在 vendor/ 目录（gestures.js 会优先加载本地，
