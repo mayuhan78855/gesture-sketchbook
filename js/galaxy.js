@@ -13,13 +13,15 @@
 import { CONFIG } from "./config.js";
 
 const PLANETS = [
-  { name: "水星", en: "MERCURY", color: 0x9c8f84, r: 0.30, dist: 6.5,  y: 0.8,  blurb: "离太阳最近的疾行者" },
-  { name: "金星", en: "VENUS",   color: 0xe8ddc0, r: 0.46, dist: 8.4,  y: -0.6, blurb: "黎明与黄昏之星" },
-  { name: "火星", en: "MARS",    color: 0xc25538, r: 0.38, dist: 10.0, y: 1.4,  blurb: "红色荒漠世界" },
-  { name: "木星", en: "JUPITER", color: 0xd8a565, r: 0.92, dist: 12.2, y: -1.2, blurb: "气态巨行星之王", ring: "faint" },
-  { name: "土星", en: "SATURN",  color: 0xe8cf96, r: 0.78, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: "bright" },
-  { name: "天王星", en: "URANUS", color: 0x7fd4d9, r: 0.55, dist: 16.0, y: -1.6, blurb: "躺着自转的冰巨星", ring: "faint" },
-  { name: "海王星", en: "NEPTUNE", color: 0x4f7fe0, r: 0.52, dist: 17.6, y: 1.1,  blurb: "风暴与深蓝", ring: "faint" },
+  // 半径按真实比例，以木星 r=0.92 为基准（真实比：水 0.035 / 金 0.087 / 火 0.048 / 木 1.0 / 土 0.833 / 天 0.363 / 海 0.352）
+  { name: "太阳", en: "SUN",     color: 0xffd35c, r: 0.0,   dist: 0.0, y: 0.0, blurb: "恒星之源", isSun: true },
+  { name: "水星", en: "MERCURY", color: 0x9c8f84, r: 0.032, dist: 6.5,  y: 0.8,  blurb: "离太阳最近的疾行者" },
+  { name: "金星", en: "VENUS",   color: 0xe8ddc0, r: 0.080, dist: 8.4,  y: -0.6, blurb: "黎明与黄昏之星" },
+  { name: "火星", en: "MARS",    color: 0xc25538, r: 0.045, dist: 10.0, y: 1.4,  blurb: "红色荒漠世界" },
+  { name: "木星", en: "JUPITER", color: 0xd8a565, r: 0.920, dist: 12.2, y: -1.2, blurb: "气态巨行星之王", ring: "faint" },
+  { name: "土星", en: "SATURN",  color: 0xe8cf96, r: 0.766, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: "bright" },
+  { name: "天王星", en: "URANUS", color: 0x7fd4d9, r: 0.334, dist: 16.0, y: -1.6, blurb: "躺着自转的冰巨星", ring: "faint" },
+  { name: "海王星", en: "NEPTUNE", color: 0x4f7fe0, r: 0.324, dist: 17.6, y: 1.1,  blurb: "风暴与深蓝", ring: "faint" },
 ];
 
 /**
@@ -35,7 +37,7 @@ function makeParticlePlanet(p, THREE, LOWEND, bodyNBase) {
   const dark = base.clone().lerp(new THREE.Color("#000000"), 0.3);
 
   // ---- 球壳 ----
-  const bodyN = LOWEND ? Math.round(bodyNBase * 0.53) : bodyNBase;
+  const bodyN = LOWEND ? Math.round(bodyNBase * 0.5) : Math.round(bodyNBase * (0.5 + p.r * 0.7));
   const bodyGeo = new THREE.BufferGeometry();
   const bpos = new Float32Array(bodyN * 3);
   const bcol = new Float32Array(bodyN * 3);
@@ -55,7 +57,7 @@ function makeParticlePlanet(p, THREE, LOWEND, bodyNBase) {
   bodyGeo.setAttribute("position", new THREE.BufferAttribute(bpos, 3));
   bodyGeo.setAttribute("color", new THREE.BufferAttribute(bcol, 3));
   const pointsBody = new THREE.Points(bodyGeo, new THREE.PointsMaterial({
-    size: Math.max(0.06, p.r * 0.12), vertexColors: true, transparent: true, opacity: 0.95,
+    size: Math.max(0.025, p.r * 0.05), vertexColors: true, transparent: true, opacity: 0.95,
     blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
   }));
   group.add(pointsBody);
@@ -195,30 +197,55 @@ export class Galaxy3D {
     }));
     this.scene.add(this.galaxyPoints);
 
-    // ---- 太阳：1400 颗金色粒子聚成的发光恒星（自转 + 脉动）----
-    const SN = 10000;
+    // ---- 太阳：发光恒星（大尺寸 + 白热核心 + 柔和日冕）----
+    const SN = LOWEND ? 10000 : 20000;
     const sunPos = new Float32Array(SN * 3);
     const sunCol = new Float32Array(SN * 3);
-    const cHot = new THREE.Color("#fff3c4"), cMid = new THREE.Color("#ffd25c"), cEdge = new THREE.Color("#ff9a3c");
+    const cHot = new THREE.Color("#fff7d6"), cMid = new THREE.Color("#ffd35c"), cEdge = new THREE.Color("#ff8a2c");
     for (let i = 0; i < SN; i++) {
-      // 中心密集、边缘稀疏的球体分布
-      const rr = Math.pow(Math.random(), 2.6) * 0.78;
+      // 中心极密、向外渐疏；整体半径放大到 ~2.0（仍远小于水星 6.5 轨道）
+      const rr = Math.pow(Math.random(), 2.7) * 2.0;
       const th = Math.random() * Math.PI * 2;
       const ph = Math.acos(2 * Math.random() - 1);
       sunPos[i * 3] = rr * Math.sin(ph) * Math.cos(th);
       sunPos[i * 3 + 1] = rr * Math.cos(ph);
       sunPos[i * 3 + 2] = rr * Math.sin(ph) * Math.sin(th);
-      const c = cHot.clone().lerp(cMid, clampGalaxy(rr / 1.12, 0, 1)).lerp(cEdge, clampGalaxy(Math.max(0, rr - 0.7) / 0.42, 0, 1));
+      const t = clampGalaxy(rr / 2.0, 0, 1);
+      const c = cHot.clone().lerp(cMid, t * 0.7).lerp(cEdge, clampGalaxy((rr - 1.2) / 0.8, 0, 1));
       sunCol[i * 3] = c.r; sunCol[i * 3 + 1] = c.g; sunCol[i * 3 + 2] = c.b;
     }
     const sunGeo = new THREE.BufferGeometry();
     sunGeo.setAttribute("position", new THREE.BufferAttribute(sunPos, 3));
     sunGeo.setAttribute("color", new THREE.BufferAttribute(sunCol, 3));
     this.sun = new THREE.Points(sunGeo, new THREE.PointsMaterial({
-      size: 0.03, vertexColors: true, transparent: true, opacity: 0.98,
+      size: 0.05, vertexColors: true, transparent: true, opacity: 1.0,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
     }));
     this.scene.add(this.sun);
+
+    // ---- 日冕：更大更稀的橙色光晕，营造发光感 ----
+    const CN = LOWEND ? 4500 : 9000;
+    const coronaPos = new Float32Array(CN * 3);
+    const coronaCol = new Float32Array(CN * 3);
+    const cCor = new THREE.Color("#ffb060");
+    for (let i = 0; i < CN; i++) {
+      const rr = 1.9 + Math.pow(Math.random(), 0.55) * 2.4;   // 1.9..4.3 外壳
+      const th = Math.random() * Math.PI * 2;
+      const ph = Math.acos(2 * Math.random() - 1);
+      coronaPos[i * 3] = rr * Math.sin(ph) * Math.cos(th);
+      coronaPos[i * 3 + 1] = rr * Math.cos(ph) * 0.85;
+      coronaPos[i * 3 + 2] = rr * Math.sin(ph) * Math.sin(th);
+      const c = cCor.clone().multiplyScalar(0.85);
+      coronaCol[i * 3] = c.r; coronaCol[i * 3 + 1] = c.g; coronaCol[i * 3 + 2] = c.b;
+    }
+    const coronaGeo = new THREE.BufferGeometry();
+    coronaGeo.setAttribute("position", new THREE.BufferAttribute(coronaPos, 3));
+    coronaGeo.setAttribute("color", new THREE.BufferAttribute(coronaCol, 3));
+    this.corona = new THREE.Points(coronaGeo, new THREE.PointsMaterial({
+      size: 0.15, vertexColors: true, transparent: true, opacity: 0.2,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+    }));
+    this.scene.add(this.corona);
 
     // ---- 行星轨道线：淡淡的圆环，让“行星绕太阳”一眼可读 ----
     for (const p of PLANETS) {
@@ -231,8 +258,12 @@ export class Galaxy3D {
       this.scene.add(orbit);
     }
 
-    // ---- 七大行星（粒子球壳 + 粒子光环）----
+    // ---- 太阳 + 七大行星（太阳已为点云，行星由 makeParticlePlanet 生成）----
     this.planets = PLANETS.map((p, i) => {
+      if (p.isSun) {
+        // 太阳已在 init() 中作为 this.sun / this.corona 单独创建，这里仅占位供标签使用
+        return { ...p, pos: new THREE.Vector3(0, 0, 0) };
+      }
       const ang = i * 2.399963 + 0.7;
       const made = makeParticlePlanet(p, THREE, LOWEND, CONFIG.galaxy.planetBody);
       const group = made.group;
@@ -241,6 +272,7 @@ export class Galaxy3D {
       group.position.set(px, py, pz);
       this.scene.add(group);
       return { ...p, ...made, pos: new THREE.Vector3(px, py, pz) };
+    });
     });
 
     this._resize();
@@ -330,7 +362,7 @@ export class Galaxy3D {
       // 到达后：环绕行星缓慢特写
       const p = this._arrivedPlanet;
       this._orbitAng += dt * 0.14;
-      const d = p.r * 2.9;
+      const d = Math.max(0.45, p.r * 2.9); // 小行星（水星等）按真实比例后极小，限制最近距离避免相机穿入
       this.camera.position.set(
         p.pos.x + Math.cos(this._orbitAng) * d,
         p.pos.y + p.r * 1.15,
@@ -394,8 +426,11 @@ export class Galaxy3D {
       }
     }
 
-    // ---- 太阳自转（无实体光圈，全粒子构成）----
+    // ---- 太阳自转 + 日冕 + 轻微脉动（更亮更有生命感）----
     this.sun.rotation.y += dt * 0.1;
+    this.corona.rotation.y += dt * 0.05;
+    this.sun.material.size = 0.05 + Math.sin(this._time * 1.6) * 0.009;
+    this.corona.material.opacity = 0.2 + Math.sin(this._time * 1.2) * 0.05;
 
     // ---- 行星标签投影（2D HUD 用）----
     this.labels = this.planets.map((p) => {
@@ -412,6 +447,7 @@ export class Galaxy3D {
       let best = null, bs = 1e9;
       for (const l of this.labels) {
         if (!l.visible) continue;
+        if (l.name === "太阳") continue; // 太阳不参与光标选中（始终显示，但不作为可抵达目标）
         // 驻留偏置：当前选中的行星额外减 55px 距离，防止光标抖动导致标签闪烁
         const d = Math.hypot(l.x - hand.palm.x, l.y - hand.palm.y) - (l.name === this.selected ? 55 : 0);
         if (d < bs) { bs = d; best = l; }

@@ -56,9 +56,11 @@ export class Flower3D {
     dl.position.set(2, 4, 3);
     this.scene.add(dl);
 
-    // ---- 点云花：花瓣 / 花芯 / 花茎 / 叶 ----
+    // ---- 点云花：牡丹式多层花瓣 / 花芯 / 花茎 / 叶 ----
     const LOW = (navigator.hardwareConcurrency || 4) <= 4;
-    const per = LOW ? 650 : 1300;      // 每片花瓣粒子
+    const perOuter = LOW ? 300 : 600;   // 外层花瓣粒子
+    const perMid   = LOW ? 270 : 540;   // 中层花瓣粒子
+    const perInner = LOW ? 225 : 450;   // 内层花瓣粒子
     const total = LOW ? Math.round(11000 / 2) : 11000;
     const group = new THREE.Group();
     const pts = [];
@@ -66,38 +68,65 @@ export class Flower3D {
     const reveal = [];                  // 逐层显现顺序（0=最先，1=最后）
     const push = (x, y, z, r, g, b, rev) => { pts.push(x, y, z); cols.push(r, g, b); reveal.push(rev); };
 
-    // 花瓣：8 片放射状 3D 杯状粒子簇（叶形宽度 + 边缘上卷 + 整体向相机鼓起，呈立体绽放）
-    const PET = 8;
-    for (let k = 0; k < PET; k++) {
-      const baseA = k * ((Math.PI * 2) / PET) + 0.12;
-      const ca = Math.cos(baseA), sa = Math.sin(baseA);
-      for (let i = 0; i < per; i++) {
-        const u = Math.pow(Math.random(), 0.6);                 // 沿花瓣 0..1（根→尖）
-        const half = 0.32 * Math.sin(Math.PI * Math.min(1, u)) * (0.3 + 0.7 * u); // 叶形：根窄→中宽→尖收
-        const w = (Math.random() * 2 - 1) * half;               // 横向 -1..1
-        const reach = 0.13 + u * 1.5;                            // 径向伸出
-        // 杯状几何：横向边缘上卷、尖端微后卷、整体向相机(+Z)鼓起成穹顶
-        const cup = w * w * 0.85;
-        const tip = u * u * 0.42;
-        const dome = u * 0.35;
-        const x = ca * reach - sa * w;
-        const y = sa * reach + ca * w;
-        const z = cup + tip + dome + (Math.random() - 0.5) * 0.05;
-        // 颜色：根浅粉 → 中玫瑰 → 边缘深玫红（对齐参考视频：粉玫瑰系，非紫蓝）
-        const hue = 348 - u * 28;
-        const sat = 62 + u * 22;
-        const lig = 84 - u * 24 - Math.abs(w) * 10 - (Math.random() - 0.5) * 5;
-        const c = new THREE.Color(`hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${clampF(lig, 44, 92).toFixed(0)}%)`);
-        const rev = 0.05 + u * 0.55 + Math.random() * 0.05;     // 逐层显现顺序
-        push(x, y, z, c.r, c.g, c.b, clampF(rev, 0, 1));
+    // 花瓣：牡丹式 3 层宽圆花瓣（外层平展浅粉 → 中层仰起红粉 → 内层直立深红）
+    const layers = [
+      { count: 12, per: perOuter, open: 0.22, len: 2.15, width: 0.48,
+        hue: 355, sat0: 16, sat1: 28, lig0: 80, lig1: 68, rev: 0.42 }, // 外层：浅粉白
+      { count: 10, per: perMid,   open: 0.42, len: 1.68, width: 0.42,
+        hue: 356, sat0: 38, sat1: 52, lig0: 68, lig1: 56, rev: 0.28 }, // 中层：红粉
+      { count: 8,  per: perInner, open: 0.62, len: 1.20, width: 0.34,
+        hue: 357, sat0: 55, sat1: 70, lig0: 56, lig1: 44, rev: 0.14 }, // 内层：深红
+    ];
+    for (const L of layers) {
+      const CO = Math.cos(L.open), SO = Math.sin(L.open);
+      for (let k = 0; k < L.count; k++) {
+        const baseA = k * ((Math.PI * 2) / L.count) + (L.count === 10 ? 0.31 : 0.12);
+        const ca = Math.cos(baseA), sa = Math.sin(baseA);
+        // 花瓣局部坐标系：e1=仰起的径向，e2=水平切向（宽度方向）
+        const e1x = ca * CO, e1y = SO, e1z = sa * CO;
+        const e2x = -sa, e2y = 0, e2z = ca;
+        for (let i = 0; i < L.per; i++) {
+          const u = Math.pow(Math.random(), 0.55);               // 沿花瓣 0..1（根部偏密）
+          // 宽圆牡丹瓣：早期即宽、圆头、不尖
+          const half = L.width * Math.pow(Math.sin(Math.PI * Math.min(1, u)), 0.55) * (0.55 + 0.45 * Math.sin(Math.PI * u * 0.5));
+          const w = (Math.random() * 2 - 1) * half;              // 横向 -1..1
+          const l = 0.1 + u * L.len;                              // 花瓣长度
+          let x = e1x * l;
+          let y = e1y * l;
+          let z = e1z * l;
+          x += e2x * w;
+          z += e2z * w;
+          // 杯状：边缘上卷(+Y)并略外扩，尖端微收
+          const cupY = w * w * 0.45;
+          const cupOut = w * w * 0.10;
+          y += cupY - u * u * 0.15;
+          x += ca * cupOut;
+          z += sa * cupOut;
+          // 更自然的粒子分布：根部更密集，尖端更稀疏，增加真实感
+          const density = Math.pow(u, 0.3); // 根部密度高，尖端密度低
+          const nz = (Math.random() - 0.5) * 0.03 * density;
+          x += nz; y += nz; z += nz;
+          // 花瓣边缘的自然变化：增加细微的不规则性
+          const edgeVariation = Math.sin(u * Math.PI * 4) * 0.005 * (1 - u);
+          x += edgeVariation;
+          z += edgeVariation * 0.5;
+          // 颜色：由该层基色向深色过渡
+          const t = u;
+          const hue = L.hue - t * 5;
+          const sat = L.sat0 + t * (L.sat1 - L.sat0);
+          const lig = L.lig0 - t * (L.lig0 - L.lig1) - Math.abs(w) * 8 - (Math.random() - 0.5) * 4;
+          const c = new THREE.Color(`hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${clampF(lig, 36, 92).toFixed(0)}%)`);
+          const rev = L.rev + t * 0.32 + Math.random() * 0.05;
+          push(x, y, z, c.r, c.g, c.b, clampF(rev, 0, 1));
+        }
       }
     }
-    // 花芯：金色密簇
-    for (let i = 0; i < (LOW ? 260 : 520); i++) {
-      const r = Math.pow(Math.random(), 0.5) * 0.2;
+    // 花芯：金黄雄蕊密簇
+    for (let i = 0; i < (LOW ? 400 : 800); i++) {
+      const r = Math.pow(Math.random(), 0.5) * 0.18;
       const a = Math.random() * Math.PI * 2;
-      const c = new THREE.Color(Math.random() < 0.3 ? "#ffe8c4" : "#ffb347");
-      push(Math.cos(a) * r, Math.sin(a) * r, 0.06 + Math.random() * 0.08, c.r, c.g, c.b, Math.random() * 0.1);
+      const c = new THREE.Color(Math.random() < 0.45 ? "#fff0a3" : "#ffcc33");
+      push(Math.cos(a) * r, Math.sin(a) * r * 0.6 + 0.04, 0.04 + Math.random() * 0.08, c.r, c.g, c.b, Math.random() * 0.08);
     }
     // 花茎：沿曲线采样的点（绿）
     const stemN = LOW ? 450 : 900;
@@ -109,18 +138,48 @@ export class Flower3D {
       const c = new THREE.Color(`hsl(${(78 + Math.random() * 22).toFixed(0)}, 46%, ${(26 + t * 20).toFixed(0)}%)`);
       push(x, y, z, c.r, c.g, c.b, 0.7 + t * 0.3);
     }
-    // 叶：两片椭圆点云
+    // 叶：叶柄连接花茎 + 叶片从叶柄末端向外伸展（叶脉结构 + 自然边缘）
     for (const [tt, side] of [[0.42, 1], [0.68, -1]]) {
-      const n = LOW ? 175 : 350;
-      const sy = -0.25 - tt * 1.75;
+      const n = LOW ? 200 : 400;
+      // 花茎上叶柄的附着点（与茎生成公式完全一致，保证贴合）
+      const ax = 0.22 * Math.sin(tt * 2.4);
+      const ay = -0.25 - tt * 1.75;
+      const az = 0.12 * Math.sin(tt * 3.1);
+      // 叶柄：从茎点斜向外下方连到叶片基部
+      const petN = LOW ? 30 : 60;
+      const pox = 0.26 * side, poz = 0.07 * side, poy = -0.07; // 叶柄末端相对茎点的偏移
+      for (let i = 0; i < petN; i++) {
+        const t = i / petN;
+        const droop = t * t * 0.025;                       // 叶柄略下垂
+        const j = (Math.random() - 0.5) * 0.012;
+        const c = new THREE.Color(`hsl(${(80 + Math.random() * 15).toFixed(0)}, 48%, ${(26 + t * 8).toFixed(0)}%)`);
+        push(ax + pox * t + j, ay + poy * t - droop + j, az + poz * t + j, c.r, c.g, c.b, 0.72 + t * 0.08);
+      }
+      // 叶片：基部在叶柄末端，沿外向展开的半椭圆叶形
+      const bx = ax + pox, by = ay + poy - 0.028, bz = az + poz;
+      const leafLength = 0.55, leafWidth = 0.17;
       for (let i = 0; i < n; i++) {
-        const u = Math.random() * Math.PI * 2;
-        const er = Math.sqrt(Math.random());
-        const lx = Math.cos(u) * 0.52 * er;
-        const lz = Math.sin(u) * 0.16 * er;
-        const ly = sy + side * 0.12 + Math.sin(u) * 0.1 * er;
-        const c = new THREE.Color(`hsl(${(82 + Math.random() * 25).toFixed(0)}, 50%, ${(28 + Math.random() * 16).toFixed(0)}%)`);
-        push(lx + 0.3 * side, ly, lz, c.r, c.g, c.b, 0.75 + Math.random() * 0.2);
+        const s = Math.pow(Math.random(), 0.7);            // 沿叶长 0..1（基部偏密）
+        const half = leafWidth * Math.pow(Math.sin(Math.PI * Math.min(1, 0.12 + s * 0.94)), 0.6); // 宽度剖面：基部窄-中部宽-尖收
+        const w = (Math.random() * 2 - 1) * half;
+        // 叶身：沿外向展开，叶尖下垂 + 横向微卷
+        let lx = bx + side * s * leafLength;
+        let ly = by - s * s * 0.10 + w * w * 0.35;
+        let lz = bz + w * (1 + 0.15 * s);
+        // 中脉贴近判断（w 越接近 0 越靠近中脉）
+        const midProx = Math.max(0, 1 - Math.abs(w) / (half * 0.35 + 1e-6));
+        // 侧脉：从中脉斜出的波纹
+        lz += Math.sin(s * Math.PI * 6) * 0.005 * side * (w >= 0 ? 1 : -1);
+        // 边缘自然变化
+        lx += (Math.random() - 0.5) * 0.012;
+        ly += (Math.random() - 0.5) * 0.012;
+        // 颜色：中脉更亮更绿，叶缘更深
+        const hue = 84 + Math.random() * 20;
+        const sat = 46 + midProx * 12;
+        const lig = clampF(30 + midProx * 10 + Math.random() * 8 - s * 4, 20, 46);
+        const c = new THREE.Color(`hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${lig.toFixed(0)}%)`);
+        const rev = 0.72 + s * 0.22 + Math.random() * 0.04;
+        push(lx, ly, lz, c.r, c.g, c.b, clampF(rev, 0, 1));
       }
     }
 
@@ -132,23 +191,27 @@ export class Flower3D {
     geo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(cols), 3));
     this.flowerGeo = geo;
     this.flowerMat = new THREE.PointsMaterial({
-      size: 0.026, vertexColors: true, transparent: true, opacity: 0.85,
+      size: 0.022, vertexColors: true, transparent: true, opacity: 0.88,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+      // 增强粒子效果：根据深度和重要性调整大小
+      sizeAttenuation: true,
+      // 添加轻微的发光效果
+      depthTest: true,
     });
     this.flower = new THREE.Points(geo, this.flowerMat);
     group.add(this.flower);
     this.flowerGroup = group;
     this.scene.add(group);
 
-    // ---- 几何扫描笼：八面体线框 + 方形底环，缓慢自转 ----
+    // ---- 几何扫描笼：八面体线框 + 方形底环，包住牡丹大花 ----
     const cage = new THREE.Group();
     const oct = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.OctahedronGeometry(1.0, 0)),
+      new THREE.EdgesGeometry(new THREE.OctahedronGeometry(1.8, 0)),
       new THREE.LineBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.22 })
     );
     cage.add(oct);
     const box = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.2, 1.2, 1.2)),
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(2.0, 2.0, 2.0)),
       new THREE.LineBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.13 })
     );
     cage.add(box);
@@ -157,7 +220,7 @@ export class Flower3D {
 
     // ---- 扫描平面：半透明青色矩形，沿 Z 往复横扫 ----
     this.scanPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.3, 1.3),
+      new THREE.PlaneGeometry(2.2, 2.2),
       new THREE.MeshBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false })
     );
     this.scene.add(this.scanPlane);
@@ -245,15 +308,15 @@ export class Flower3D {
 
     // ---- 应用变换 ----
     this.flowerGroup.rotation.y = this.rotY + Math.sin(this._time * 0.5) * 0.06;
-    this.flowerGroup.rotation.x = -0.42 + Math.sin(this._time * 0.4) * 0.04; // 略后仰，呈立体绽放（宽扁视角）
+    this.flowerGroup.rotation.x = -0.15 + Math.sin(this._time * 0.4) * 0.04; // 轻微前倾，让向上的立体碗正对镜头
     this.flowerGroup.position.set(this.pos.x, this.pos.y + 0.12, 0);
     const sc = this.scale * (0.55 + 0.45 * this.fade);
     this.flowerGroup.scale.setScalar(sc);
     this.cageGroup.position.set(this.pos.x, this.pos.y, 0);
-    this.cageGroup.scale.setScalar(this.cage * this.scale * 0.55);
+    this.cageGroup.scale.setScalar(this.cage * this.scale * 0.95);
     this.cageGroup.rotation.y += dt * 0.35;
     this.cageGroup.rotation.x = Math.sin(this._time * 0.4) * 0.15;
-    this.scanPlane.position.z = Math.sin(this.scanT) * 1.25;
+    this.scanPlane.position.z = Math.sin(this.scanT) * 1.8;
     this.scanPlane.rotation.z += dt * 0.6;
     this.scanPlane.visible = this.scanning || this.state === "summoning";
     if (this.scanning) this.scanT += dt * 3.2;

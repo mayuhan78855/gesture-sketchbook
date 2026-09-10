@@ -521,7 +521,7 @@ const CONFIG = {
   galaxy: {
     stars: 9000,         // 银河背景星数（低配电脑调低到 5000）
     travelDur: 2.2,      // 跃迁飞行时长（秒）
-    planetBody: 3500,    // 每颗行星球壳粒子数（低配自动减半）
+    planetBody: 8000,    // 每颗行星球壳粒子数（低配自动减半；实际按行星半径缩放）
   },
 
   // MediaPipe 模型/wasm：已本地化在 vendor/ 目录（gestures.js 会优先加载本地，
@@ -1645,13 +1645,15 @@ class Space3D {
 
 
 const PLANETS = [
-  { name: "水星", en: "MERCURY", color: 0x9c8f84, r: 0.30, dist: 6.5,  y: 0.8,  blurb: "离太阳最近的疾行者" },
-  { name: "金星", en: "VENUS",   color: 0xe8ddc0, r: 0.46, dist: 8.4,  y: -0.6, blurb: "黎明与黄昏之星" },
-  { name: "火星", en: "MARS",    color: 0xc25538, r: 0.38, dist: 10.0, y: 1.4,  blurb: "红色荒漠世界" },
-  { name: "木星", en: "JUPITER", color: 0xd8a565, r: 0.92, dist: 12.2, y: -1.2, blurb: "气态巨行星之王", ring: "faint" },
-  { name: "土星", en: "SATURN",  color: 0xe8cf96, r: 0.78, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: "bright" },
-  { name: "天王星", en: "URANUS", color: 0x7fd4d9, r: 0.55, dist: 16.0, y: -1.6, blurb: "躺着自转的冰巨星", ring: "faint" },
-  { name: "海王星", en: "NEPTUNE", color: 0x4f7fe0, r: 0.52, dist: 17.6, y: 1.1,  blurb: "风暴与深蓝", ring: "faint" },
+  // 半径按真实比例，以木星 r=0.92 为基准（真实比：水 0.035 / 金 0.087 / 火 0.048 / 木 1.0 / 土 0.833 / 天 0.363 / 海 0.352）
+  { name: "太阳", en: "SUN",     color: 0xffd35c, r: 0.0,   dist: 0.0, y: 0.0, blurb: "恒星之源", isSun: true },
+  { name: "水星", en: "MERCURY", color: 0x9c8f84, r: 0.032, dist: 6.5,  y: 0.8,  blurb: "离太阳最近的疾行者" },
+  { name: "金星", en: "VENUS",   color: 0xe8ddc0, r: 0.080, dist: 8.4,  y: -0.6, blurb: "黎明与黄昏之星" },
+  { name: "火星", en: "MARS",    color: 0xc25538, r: 0.045, dist: 10.0, y: 1.4,  blurb: "红色荒漠世界" },
+  { name: "木星", en: "JUPITER", color: 0xd8a565, r: 0.920, dist: 12.2, y: -1.2, blurb: "气态巨行星之王", ring: "faint" },
+  { name: "土星", en: "SATURN",  color: 0xe8cf96, r: 0.766, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: "bright" },
+  { name: "天王星", en: "URANUS", color: 0x7fd4d9, r: 0.334, dist: 16.0, y: -1.6, blurb: "躺着自转的冰巨星", ring: "faint" },
+  { name: "海王星", en: "NEPTUNE", color: 0x4f7fe0, r: 0.324, dist: 17.6, y: 1.1,  blurb: "风暴与深蓝", ring: "faint" },
 ];
 
 /**
@@ -1667,7 +1669,7 @@ function makeParticlePlanet(p, THREE, LOWEND, bodyNBase) {
   const dark = base.clone().lerp(new THREE.Color("#000000"), 0.3);
 
   // ---- 球壳 ----
-  const bodyN = LOWEND ? Math.round(bodyNBase * 0.53) : bodyNBase;
+  const bodyN = LOWEND ? Math.round(bodyNBase * 0.5) : Math.round(bodyNBase * (0.5 + p.r * 0.7));
   const bodyGeo = new THREE.BufferGeometry();
   const bpos = new Float32Array(bodyN * 3);
   const bcol = new Float32Array(bodyN * 3);
@@ -1687,7 +1689,7 @@ function makeParticlePlanet(p, THREE, LOWEND, bodyNBase) {
   bodyGeo.setAttribute("position", new THREE.BufferAttribute(bpos, 3));
   bodyGeo.setAttribute("color", new THREE.BufferAttribute(bcol, 3));
   const pointsBody = new THREE.Points(bodyGeo, new THREE.PointsMaterial({
-    size: Math.max(0.06, p.r * 0.12), vertexColors: true, transparent: true, opacity: 0.95,
+    size: Math.max(0.025, p.r * 0.05), vertexColors: true, transparent: true, opacity: 0.95,
     blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
   }));
   group.add(pointsBody);
@@ -1827,30 +1829,55 @@ class Galaxy3D {
     }));
     this.scene.add(this.galaxyPoints);
 
-    // ---- 太阳：1400 颗金色粒子聚成的发光恒星（自转 + 脉动）----
-    const SN = 10000;
+    // ---- 太阳：发光恒星（大尺寸 + 白热核心 + 柔和日冕）----
+    const SN = LOWEND ? 10000 : 20000;
     const sunPos = new Float32Array(SN * 3);
     const sunCol = new Float32Array(SN * 3);
-    const cHot = new THREE.Color("#fff3c4"), cMid = new THREE.Color("#ffd25c"), cEdge = new THREE.Color("#ff9a3c");
+    const cHot = new THREE.Color("#fff7d6"), cMid = new THREE.Color("#ffd35c"), cEdge = new THREE.Color("#ff8a2c");
     for (let i = 0; i < SN; i++) {
-      // 中心密集、边缘稀疏的球体分布
-      const rr = Math.pow(Math.random(), 2.6) * 0.78;
+      // 中心极密、向外渐疏；整体半径放大到 ~2.0（仍远小于水星 6.5 轨道）
+      const rr = Math.pow(Math.random(), 2.7) * 2.0;
       const th = Math.random() * Math.PI * 2;
       const ph = Math.acos(2 * Math.random() - 1);
       sunPos[i * 3] = rr * Math.sin(ph) * Math.cos(th);
       sunPos[i * 3 + 1] = rr * Math.cos(ph);
       sunPos[i * 3 + 2] = rr * Math.sin(ph) * Math.sin(th);
-      const c = cHot.clone().lerp(cMid, clampGalaxy(rr / 1.12, 0, 1)).lerp(cEdge, clampGalaxy(Math.max(0, rr - 0.7) / 0.42, 0, 1));
+      const t = clampGalaxy(rr / 2.0, 0, 1);
+      const c = cHot.clone().lerp(cMid, t * 0.7).lerp(cEdge, clampGalaxy((rr - 1.2) / 0.8, 0, 1));
       sunCol[i * 3] = c.r; sunCol[i * 3 + 1] = c.g; sunCol[i * 3 + 2] = c.b;
     }
     const sunGeo = new THREE.BufferGeometry();
     sunGeo.setAttribute("position", new THREE.BufferAttribute(sunPos, 3));
     sunGeo.setAttribute("color", new THREE.BufferAttribute(sunCol, 3));
     this.sun = new THREE.Points(sunGeo, new THREE.PointsMaterial({
-      size: 0.03, vertexColors: true, transparent: true, opacity: 0.98,
+      size: 0.05, vertexColors: true, transparent: true, opacity: 1.0,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
     }));
     this.scene.add(this.sun);
+
+    // ---- 日冕：更大更稀的橙色光晕，营造发光感 ----
+    const CN = LOWEND ? 4500 : 9000;
+    const coronaPos = new Float32Array(CN * 3);
+    const coronaCol = new Float32Array(CN * 3);
+    const cCor = new THREE.Color("#ffb060");
+    for (let i = 0; i < CN; i++) {
+      const rr = 1.9 + Math.pow(Math.random(), 0.55) * 2.4;   // 1.9..4.3 外壳
+      const th = Math.random() * Math.PI * 2;
+      const ph = Math.acos(2 * Math.random() - 1);
+      coronaPos[i * 3] = rr * Math.sin(ph) * Math.cos(th);
+      coronaPos[i * 3 + 1] = rr * Math.cos(ph) * 0.85;
+      coronaPos[i * 3 + 2] = rr * Math.sin(ph) * Math.sin(th);
+      const c = cCor.clone().multiplyScalar(0.85);
+      coronaCol[i * 3] = c.r; coronaCol[i * 3 + 1] = c.g; coronaCol[i * 3 + 2] = c.b;
+    }
+    const coronaGeo = new THREE.BufferGeometry();
+    coronaGeo.setAttribute("position", new THREE.BufferAttribute(coronaPos, 3));
+    coronaGeo.setAttribute("color", new THREE.BufferAttribute(coronaCol, 3));
+    this.corona = new THREE.Points(coronaGeo, new THREE.PointsMaterial({
+      size: 0.15, vertexColors: true, transparent: true, opacity: 0.2,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+    }));
+    this.scene.add(this.corona);
 
     // ---- 行星轨道线：淡淡的圆环，让“行星绕太阳”一眼可读 ----
     for (const p of PLANETS) {
@@ -1863,8 +1890,12 @@ class Galaxy3D {
       this.scene.add(orbit);
     }
 
-    // ---- 七大行星（粒子球壳 + 粒子光环）----
+    // ---- 太阳 + 七大行星（太阳已为点云，行星由 makeParticlePlanet 生成）----
     this.planets = PLANETS.map((p, i) => {
+      if (p.isSun) {
+        // 太阳已在 init() 中作为 this.sun / this.corona 单独创建，这里仅占位供标签使用
+        return { ...p, pos: new THREE.Vector3(0, 0, 0) };
+      }
       const ang = i * 2.399963 + 0.7;
       const made = makeParticlePlanet(p, THREE, LOWEND, CONFIG.galaxy.planetBody);
       const group = made.group;
@@ -1873,6 +1904,7 @@ class Galaxy3D {
       group.position.set(px, py, pz);
       this.scene.add(group);
       return { ...p, ...made, pos: new THREE.Vector3(px, py, pz) };
+    });
     });
 
     this._resize();
@@ -1962,7 +1994,7 @@ class Galaxy3D {
       // 到达后：环绕行星缓慢特写
       const p = this._arrivedPlanet;
       this._orbitAng += dt * 0.14;
-      const d = p.r * 2.9;
+      const d = Math.max(0.45, p.r * 2.9); // 小行星（水星等）按真实比例后极小，限制最近距离避免相机穿入
       this.camera.position.set(
         p.pos.x + Math.cos(this._orbitAng) * d,
         p.pos.y + p.r * 1.15,
@@ -2026,8 +2058,11 @@ class Galaxy3D {
       }
     }
 
-    // ---- 太阳自转（无实体光圈，全粒子构成）----
+    // ---- 太阳自转 + 日冕 + 轻微脉动（更亮更有生命感）----
     this.sun.rotation.y += dt * 0.1;
+    this.corona.rotation.y += dt * 0.05;
+    this.sun.material.size = 0.05 + Math.sin(this._time * 1.6) * 0.009;
+    this.corona.material.opacity = 0.2 + Math.sin(this._time * 1.2) * 0.05;
 
     // ---- 行星标签投影（2D HUD 用）----
     this.labels = this.planets.map((p) => {
@@ -2044,6 +2079,7 @@ class Galaxy3D {
       let best = null, bs = 1e9;
       for (const l of this.labels) {
         if (!l.visible) continue;
+        if (l.name === "太阳") continue; // 太阳不参与光标选中（始终显示，但不作为可抵达目标）
         // 驻留偏置：当前选中的行星额外减 55px 距离，防止光标抖动导致标签闪烁
         const d = Math.hypot(l.x - hand.palm.x, l.y - hand.palm.y) - (l.name === this.selected ? 55 : 0);
         if (d < bs) { bs = d; best = l; }
@@ -2118,9 +2154,11 @@ class Flower3D {
     dl.position.set(2, 4, 3);
     this.scene.add(dl);
 
-    // ---- 点云花：花瓣 / 花芯 / 花茎 / 叶 ----
+    // ---- 点云花：牡丹式多层花瓣 / 花芯 / 花茎 / 叶 ----
     const LOW = (navigator.hardwareConcurrency || 4) <= 4;
-    const per = LOW ? 650 : 1300;      // 每片花瓣粒子
+    const perOuter = LOW ? 300 : 600;   // 外层花瓣粒子
+    const perMid   = LOW ? 270 : 540;   // 中层花瓣粒子
+    const perInner = LOW ? 225 : 450;   // 内层花瓣粒子
     const total = LOW ? Math.round(11000 / 2) : 11000;
     const group = new THREE.Group();
     const pts = [];
@@ -2128,38 +2166,65 @@ class Flower3D {
     const reveal = [];                  // 逐层显现顺序（0=最先，1=最后）
     const push = (x, y, z, r, g, b, rev) => { pts.push(x, y, z); cols.push(r, g, b); reveal.push(rev); };
 
-    // 花瓣：8 片放射状 3D 杯状粒子簇（叶形宽度 + 边缘上卷 + 整体向相机鼓起，呈立体绽放）
-    const PET = 8;
-    for (let k = 0; k < PET; k++) {
-      const baseA = k * ((Math.PI * 2) / PET) + 0.12;
-      const ca = Math.cos(baseA), sa = Math.sin(baseA);
-      for (let i = 0; i < per; i++) {
-        const u = Math.pow(Math.random(), 0.6);                 // 沿花瓣 0..1（根→尖）
-        const half = 0.32 * Math.sin(Math.PI * Math.min(1, u)) * (0.3 + 0.7 * u); // 叶形：根窄→中宽→尖收
-        const w = (Math.random() * 2 - 1) * half;               // 横向 -1..1
-        const reach = 0.13 + u * 1.5;                            // 径向伸出
-        // 杯状几何：横向边缘上卷、尖端微后卷、整体向相机(+Z)鼓起成穹顶
-        const cup = w * w * 0.85;
-        const tip = u * u * 0.42;
-        const dome = u * 0.35;
-        const x = ca * reach - sa * w;
-        const y = sa * reach + ca * w;
-        const z = cup + tip + dome + (Math.random() - 0.5) * 0.05;
-        // 颜色：根浅粉 → 中玫瑰 → 边缘深玫红（对齐参考视频：粉玫瑰系，非紫蓝）
-        const hue = 348 - u * 28;
-        const sat = 62 + u * 22;
-        const lig = 84 - u * 24 - Math.abs(w) * 10 - (Math.random() - 0.5) * 5;
-        const c = new THREE.Color(`hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${clampF(lig, 44, 92).toFixed(0)}%)`);
-        const rev = 0.05 + u * 0.55 + Math.random() * 0.05;     // 逐层显现顺序
-        push(x, y, z, c.r, c.g, c.b, clampF(rev, 0, 1));
+    // 花瓣：牡丹式 3 层宽圆花瓣（外层平展浅粉 → 中层仰起红粉 → 内层直立深红）
+    const layers = [
+      { count: 12, per: perOuter, open: 0.22, len: 2.15, width: 0.48,
+        hue: 355, sat0: 16, sat1: 28, lig0: 80, lig1: 68, rev: 0.42 }, // 外层：浅粉白
+      { count: 10, per: perMid,   open: 0.42, len: 1.68, width: 0.42,
+        hue: 356, sat0: 38, sat1: 52, lig0: 68, lig1: 56, rev: 0.28 }, // 中层：红粉
+      { count: 8,  per: perInner, open: 0.62, len: 1.20, width: 0.34,
+        hue: 357, sat0: 55, sat1: 70, lig0: 56, lig1: 44, rev: 0.14 }, // 内层：深红
+    ];
+    for (const L of layers) {
+      const CO = Math.cos(L.open), SO = Math.sin(L.open);
+      for (let k = 0; k < L.count; k++) {
+        const baseA = k * ((Math.PI * 2) / L.count) + (L.count === 10 ? 0.31 : 0.12);
+        const ca = Math.cos(baseA), sa = Math.sin(baseA);
+        // 花瓣局部坐标系：e1=仰起的径向，e2=水平切向（宽度方向）
+        const e1x = ca * CO, e1y = SO, e1z = sa * CO;
+        const e2x = -sa, e2y = 0, e2z = ca;
+        for (let i = 0; i < L.per; i++) {
+          const u = Math.pow(Math.random(), 0.55);               // 沿花瓣 0..1（根部偏密）
+          // 宽圆牡丹瓣：早期即宽、圆头、不尖
+          const half = L.width * Math.pow(Math.sin(Math.PI * Math.min(1, u)), 0.55) * (0.55 + 0.45 * Math.sin(Math.PI * u * 0.5));
+          const w = (Math.random() * 2 - 1) * half;              // 横向 -1..1
+          const l = 0.1 + u * L.len;                              // 花瓣长度
+          let x = e1x * l;
+          let y = e1y * l;
+          let z = e1z * l;
+          x += e2x * w;
+          z += e2z * w;
+          // 杯状：边缘上卷(+Y)并略外扩，尖端微收
+          const cupY = w * w * 0.45;
+          const cupOut = w * w * 0.10;
+          y += cupY - u * u * 0.15;
+          x += ca * cupOut;
+          z += sa * cupOut;
+          // 更自然的粒子分布：根部更密集，尖端更稀疏，增加真实感
+          const density = Math.pow(u, 0.3); // 根部密度高，尖端密度低
+          const nz = (Math.random() - 0.5) * 0.03 * density;
+          x += nz; y += nz; z += nz;
+          // 花瓣边缘的自然变化：增加细微的不规则性
+          const edgeVariation = Math.sin(u * Math.PI * 4) * 0.005 * (1 - u);
+          x += edgeVariation;
+          z += edgeVariation * 0.5;
+          // 颜色：由该层基色向深色过渡
+          const t = u;
+          const hue = L.hue - t * 5;
+          const sat = L.sat0 + t * (L.sat1 - L.sat0);
+          const lig = L.lig0 - t * (L.lig0 - L.lig1) - Math.abs(w) * 8 - (Math.random() - 0.5) * 4;
+          const c = new THREE.Color(`hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${clampF(lig, 36, 92).toFixed(0)}%)`);
+          const rev = L.rev + t * 0.32 + Math.random() * 0.05;
+          push(x, y, z, c.r, c.g, c.b, clampF(rev, 0, 1));
+        }
       }
     }
-    // 花芯：金色密簇
-    for (let i = 0; i < (LOW ? 260 : 520); i++) {
-      const r = Math.pow(Math.random(), 0.5) * 0.2;
+    // 花芯：金黄雄蕊密簇
+    for (let i = 0; i < (LOW ? 400 : 800); i++) {
+      const r = Math.pow(Math.random(), 0.5) * 0.18;
       const a = Math.random() * Math.PI * 2;
-      const c = new THREE.Color(Math.random() < 0.3 ? "#ffe8c4" : "#ffb347");
-      push(Math.cos(a) * r, Math.sin(a) * r, 0.06 + Math.random() * 0.08, c.r, c.g, c.b, Math.random() * 0.1);
+      const c = new THREE.Color(Math.random() < 0.45 ? "#fff0a3" : "#ffcc33");
+      push(Math.cos(a) * r, Math.sin(a) * r * 0.6 + 0.04, 0.04 + Math.random() * 0.08, c.r, c.g, c.b, Math.random() * 0.08);
     }
     // 花茎：沿曲线采样的点（绿）
     const stemN = LOW ? 450 : 900;
@@ -2171,18 +2236,48 @@ class Flower3D {
       const c = new THREE.Color(`hsl(${(78 + Math.random() * 22).toFixed(0)}, 46%, ${(26 + t * 20).toFixed(0)}%)`);
       push(x, y, z, c.r, c.g, c.b, 0.7 + t * 0.3);
     }
-    // 叶：两片椭圆点云
+    // 叶：叶柄连接花茎 + 叶片从叶柄末端向外伸展（叶脉结构 + 自然边缘）
     for (const [tt, side] of [[0.42, 1], [0.68, -1]]) {
-      const n = LOW ? 175 : 350;
-      const sy = -0.25 - tt * 1.75;
+      const n = LOW ? 200 : 400;
+      // 花茎上叶柄的附着点（与茎生成公式完全一致，保证贴合）
+      const ax = 0.22 * Math.sin(tt * 2.4);
+      const ay = -0.25 - tt * 1.75;
+      const az = 0.12 * Math.sin(tt * 3.1);
+      // 叶柄：从茎点斜向外下方连到叶片基部
+      const petN = LOW ? 30 : 60;
+      const pox = 0.26 * side, poz = 0.07 * side, poy = -0.07; // 叶柄末端相对茎点的偏移
+      for (let i = 0; i < petN; i++) {
+        const t = i / petN;
+        const droop = t * t * 0.025;                       // 叶柄略下垂
+        const j = (Math.random() - 0.5) * 0.012;
+        const c = new THREE.Color(`hsl(${(80 + Math.random() * 15).toFixed(0)}, 48%, ${(26 + t * 8).toFixed(0)}%)`);
+        push(ax + pox * t + j, ay + poy * t - droop + j, az + poz * t + j, c.r, c.g, c.b, 0.72 + t * 0.08);
+      }
+      // 叶片：基部在叶柄末端，沿外向展开的半椭圆叶形
+      const bx = ax + pox, by = ay + poy - 0.028, bz = az + poz;
+      const leafLength = 0.55, leafWidth = 0.17;
       for (let i = 0; i < n; i++) {
-        const u = Math.random() * Math.PI * 2;
-        const er = Math.sqrt(Math.random());
-        const lx = Math.cos(u) * 0.52 * er;
-        const lz = Math.sin(u) * 0.16 * er;
-        const ly = sy + side * 0.12 + Math.sin(u) * 0.1 * er;
-        const c = new THREE.Color(`hsl(${(82 + Math.random() * 25).toFixed(0)}, 50%, ${(28 + Math.random() * 16).toFixed(0)}%)`);
-        push(lx + 0.3 * side, ly, lz, c.r, c.g, c.b, 0.75 + Math.random() * 0.2);
+        const s = Math.pow(Math.random(), 0.7);            // 沿叶长 0..1（基部偏密）
+        const half = leafWidth * Math.pow(Math.sin(Math.PI * Math.min(1, 0.12 + s * 0.94)), 0.6); // 宽度剖面：基部窄-中部宽-尖收
+        const w = (Math.random() * 2 - 1) * half;
+        // 叶身：沿外向展开，叶尖下垂 + 横向微卷
+        let lx = bx + side * s * leafLength;
+        let ly = by - s * s * 0.10 + w * w * 0.35;
+        let lz = bz + w * (1 + 0.15 * s);
+        // 中脉贴近判断（w 越接近 0 越靠近中脉）
+        const midProx = Math.max(0, 1 - Math.abs(w) / (half * 0.35 + 1e-6));
+        // 侧脉：从中脉斜出的波纹
+        lz += Math.sin(s * Math.PI * 6) * 0.005 * side * (w >= 0 ? 1 : -1);
+        // 边缘自然变化
+        lx += (Math.random() - 0.5) * 0.012;
+        ly += (Math.random() - 0.5) * 0.012;
+        // 颜色：中脉更亮更绿，叶缘更深
+        const hue = 84 + Math.random() * 20;
+        const sat = 46 + midProx * 12;
+        const lig = clampF(30 + midProx * 10 + Math.random() * 8 - s * 4, 20, 46);
+        const c = new THREE.Color(`hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${lig.toFixed(0)}%)`);
+        const rev = 0.72 + s * 0.22 + Math.random() * 0.04;
+        push(lx, ly, lz, c.r, c.g, c.b, clampF(rev, 0, 1));
       }
     }
 
@@ -2194,23 +2289,27 @@ class Flower3D {
     geo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(cols), 3));
     this.flowerGeo = geo;
     this.flowerMat = new THREE.PointsMaterial({
-      size: 0.026, vertexColors: true, transparent: true, opacity: 0.85,
+      size: 0.022, vertexColors: true, transparent: true, opacity: 0.88,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+      // 增强粒子效果：根据深度和重要性调整大小
+      sizeAttenuation: true,
+      // 添加轻微的发光效果
+      depthTest: true,
     });
     this.flower = new THREE.Points(geo, this.flowerMat);
     group.add(this.flower);
     this.flowerGroup = group;
     this.scene.add(group);
 
-    // ---- 几何扫描笼：八面体线框 + 方形底环，缓慢自转 ----
+    // ---- 几何扫描笼：八面体线框 + 方形底环，包住牡丹大花 ----
     const cage = new THREE.Group();
     const oct = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.OctahedronGeometry(1.0, 0)),
+      new THREE.EdgesGeometry(new THREE.OctahedronGeometry(1.8, 0)),
       new THREE.LineBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.22 })
     );
     cage.add(oct);
     const box = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.2, 1.2, 1.2)),
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(2.0, 2.0, 2.0)),
       new THREE.LineBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.13 })
     );
     cage.add(box);
@@ -2219,7 +2318,7 @@ class Flower3D {
 
     // ---- 扫描平面：半透明青色矩形，沿 Z 往复横扫 ----
     this.scanPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.3, 1.3),
+      new THREE.PlaneGeometry(2.2, 2.2),
       new THREE.MeshBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false })
     );
     this.scene.add(this.scanPlane);
@@ -2307,15 +2406,15 @@ class Flower3D {
 
     // ---- 应用变换 ----
     this.flowerGroup.rotation.y = this.rotY + Math.sin(this._time * 0.5) * 0.06;
-    this.flowerGroup.rotation.x = -0.42 + Math.sin(this._time * 0.4) * 0.04; // 略后仰，呈立体绽放（宽扁视角）
+    this.flowerGroup.rotation.x = -0.15 + Math.sin(this._time * 0.4) * 0.04; // 轻微前倾，让向上的立体碗正对镜头
     this.flowerGroup.position.set(this.pos.x, this.pos.y + 0.12, 0);
     const sc = this.scale * (0.55 + 0.45 * this.fade);
     this.flowerGroup.scale.setScalar(sc);
     this.cageGroup.position.set(this.pos.x, this.pos.y, 0);
-    this.cageGroup.scale.setScalar(this.cage * this.scale * 0.55);
+    this.cageGroup.scale.setScalar(this.cage * this.scale * 0.95);
     this.cageGroup.rotation.y += dt * 0.35;
     this.cageGroup.rotation.x = Math.sin(this._time * 0.4) * 0.15;
-    this.scanPlane.position.z = Math.sin(this.scanT) * 1.25;
+    this.scanPlane.position.z = Math.sin(this.scanT) * 1.8;
     this.scanPlane.rotation.z += dt * 0.6;
     this.scanPlane.visible = this.scanning || this.state === "summoning";
     if (this.scanning) this.scanT += dt * 3.2;
