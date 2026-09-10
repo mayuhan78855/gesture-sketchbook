@@ -145,6 +145,35 @@ body::after {
 #camBg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .media-src { position: fixed; left: -9999px; top: 0; width: 320px; height: 240px; opacity: 0.01; pointer-events: none; }
 
+/* 花朵页 3D 点云扫描仪 HUD */
+#darkOverlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.72); }
+#flowerStatus {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  font: 600 13px Consolas, "Cascadia Code", monospace; letter-spacing: .18em;
+  color: #2dd8ff; background: rgba(7, 11, 18, .6); border: 1px solid rgba(45, 216, 255, .3);
+  padding: 8px 18px; white-space: nowrap; z-index: 6;
+}
+.hud-panel {
+  position: absolute; z-index: 6; width: 228px; background: rgba(7, 11, 18, .78);
+  border: 1px solid rgba(45, 216, 255, .3); padding: 12px 14px;
+  font-family: Consolas, "Cascadia Code", monospace; color: #d7e6f5;
+}
+.hud-left { left: 16px; top: 50%; transform: translateY(-50%); }
+.hud-right { right: 16px; top: 50%; transform: translateY(-50%); }
+.hud-title { font-size: 11px; letter-spacing: .16em; color: #2dd8ff; border-bottom: 1px solid rgba(45, 216, 255, .25); padding-bottom: 7px; margin-bottom: 9px; }
+.hud-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11.5px; padding: 4px 0; color: #a7b8c9; }
+.hud-row input[type="range"] { width: 110px; accent-color: #2dd8ff; }
+.hud-row span { color: #6b7f94; text-align: right; }
+.hud-btns { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+.hud-btn {
+  font: 11px Consolas, monospace; letter-spacing: .1em; color: #d7e6f5; text-align: center;
+  background: rgba(45, 216, 255, .08); border: 1px solid rgba(45, 216, 255, .35);
+  padding: 7px 10px; cursor: pointer; user-select: none;
+}
+.hud-btn:hover { color: #2dd8ff; box-shadow: 0 0 12px rgba(45, 216, 255, .25); }
+.hud-btn.active { color: #0b111c; background: #2dd8ff; }
+.media-src { position: fixed; left: -9999px; top: 0; width: 320px; height: 240px; opacity: 0.01; pointer-events: none; }
+
 /* 独立单体验页（/flower/ /galaxy/）：全屏沉浸，隐藏侧栏与模式切换 */
 body.single .mode-row { display: none; }
 body.single .topbar { position: fixed; top: 12px; left: 16px; right: 16px; padding: 0; background: transparent; border-bottom: none; z-index: 6; }
@@ -492,6 +521,7 @@ const CONFIG = {
   galaxy: {
     stars: 9000,         // 银河背景星数（低配电脑调低到 5000）
     travelDur: 2.2,      // 跃迁飞行时长（秒）
+    planetBody: 1500,    // 每颗行星球壳粒子数（低配自动减半）
   },
 
   // MediaPipe 模型/wasm：已本地化在 vendor/ 目录（gestures.js 会优先加载本地，
@@ -1618,11 +1648,91 @@ const PLANETS = [
   { name: "水星", en: "MERCURY", color: 0x9c8f84, r: 0.30, dist: 6.5,  y: 0.8,  blurb: "离太阳最近的疾行者" },
   { name: "金星", en: "VENUS",   color: 0xe8ddc0, r: 0.46, dist: 8.4,  y: -0.6, blurb: "黎明与黄昏之星" },
   { name: "火星", en: "MARS",    color: 0xc25538, r: 0.38, dist: 10.0, y: 1.4,  blurb: "红色荒漠世界" },
-  { name: "木星", en: "JUPITER", color: 0xd8a565, r: 0.92, dist: 12.2, y: -1.2, blurb: "气态巨行星之王" },
-  { name: "土星", en: "SATURN",  color: 0xe8cf96, r: 0.78, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: true },
-  { name: "天王星", en: "URANUS", color: 0x7fd4d9, r: 0.55, dist: 16.0, y: -1.6, blurb: "躺着自转的冰巨星" },
-  { name: "海王星", en: "NEPTUNE", color: 0x4f7fe0, r: 0.52, dist: 17.6, y: 1.1,  blurb: "风暴与深蓝" },
+  { name: "木星", en: "JUPITER", color: 0xd8a565, r: 0.92, dist: 12.2, y: -1.2, blurb: "气态巨行星之王", ring: "faint" },
+  { name: "土星", en: "SATURN",  color: 0xe8cf96, r: 0.78, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: "bright" },
+  { name: "天王星", en: "URANUS", color: 0x7fd4d9, r: 0.55, dist: 16.0, y: -1.6, blurb: "躺着自转的冰巨星", ring: "faint" },
+  { name: "海王星", en: "NEPTUNE", color: 0x4f7fe0, r: 0.52, dist: 17.6, y: 1.1,  blurb: "风暴与深蓝", ring: "faint" },
 ];
+
+/**
+ * makeParticlePlanet —— 粒子行星工厂
+ * 球壳：斐波那契球均匀布点（顶点色按纬度渐变）+ 暗色 core 撑体积；
+ * 光环：复用 space3d 的环采样数学（rr 内密外疏 / yy 厚度 / sp 内快外慢），倾角固定；
+ * 环粒子位置每帧由 update() 推进（到达态由手驱动加速）。
+ */
+function makeParticlePlanet(p, THREE, LOWEND, bodyNBase) {
+  const group = new THREE.Group();
+  const base = new THREE.Color(p.color);
+  const bright = base.clone().lerp(new THREE.Color("#ffffff"), 0.4);
+  const dark = base.clone().lerp(new THREE.Color("#000000"), 0.3);
+
+  // ---- 球壳 ----
+  const bodyN = LOWEND ? Math.round(bodyNBase * 0.53) : bodyNBase;
+  const bodyGeo = new THREE.BufferGeometry();
+  const bpos = new Float32Array(bodyN * 3);
+  const bcol = new Float32Array(bodyN * 3);
+  for (let i = 0; i < bodyN; i++) {
+    const y = 1 - (2 * (i + 0.5)) / bodyN;
+    const rad = Math.sqrt(Math.max(0, 1 - y * y));
+    const phi = i * 2.399963;
+    const c = dark.clone().lerp(bright, clampGalaxy((y + 1) / 2 + (Math.random() - 0.5) * 0.2, 0, 1));
+    bpos[i * 3] = Math.cos(phi) * rad * p.r;
+    bpos[i * 3 + 1] = y * p.r;
+    bpos[i * 3 + 2] = Math.sin(phi) * rad * p.r;
+    bcol[i * 3] = Math.min(1, c.r); bcol[i * 3 + 1] = Math.min(1, c.g); bcol[i * 3 + 2] = Math.min(1, c.b);
+  }
+  bodyGeo.setAttribute("position", new THREE.BufferAttribute(bpos, 3));
+  bodyGeo.setAttribute("color", new THREE.BufferAttribute(bcol, 3));
+  const pointsBody = new THREE.Points(bodyGeo, new THREE.PointsMaterial({
+    size: Math.max(0.03, p.r * 0.07), vertexColors: true, transparent: true, opacity: 0.95,
+    blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+  }));
+  group.add(pointsBody);
+
+  // 暗色 core：撑出体积感，避免纯粒子显得空
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(p.r * 0.92, 24, 18),
+    new THREE.MeshBasicMaterial({ color: base.clone().multiplyScalar(0.3) })
+  );
+  group.add(core);
+
+  // ---- 光环（土星亮环；木星/天王星/海王星淡环）----
+  let pointsRing = null, ringGeo = null;
+  let a = null, rr = null, yy = null, sp = null, rm = null, ringN = 0, ringR0 = null;
+  if (p.ring) {
+    const isBright = p.ring === "bright";
+    ringN = isBright ? (LOWEND ? 1200 : 2500) : (LOWEND ? 600 : 1200);
+    a = new Float32Array(ringN); rr = new Float32Array(ringN); yy = new Float32Array(ringN);
+    sp = new Float32Array(ringN); rm = new Float32Array(ringN); ringR0 = new Float32Array(ringN);
+    ringGeo = new THREE.BufferGeometry();
+    const rpos = new Float32Array(ringN * 3);
+    const rcol = new Float32Array(ringN * 3);
+    const rIn = p.r * 1.4, rOut = p.r * (isBright ? 2.4 : 2.0);
+    const rc = base.clone().lerp(new THREE.Color("#ffffff"), 0.3);
+    for (let i = 0; i < ringN; i++) {
+      rr[i] = Math.pow(Math.random(), 0.6); // 内密外疏
+      a[i] = Math.random() * Math.PI * 2;
+      yy[i] = (Math.random() - 0.5) * (0.05 + rr[i] * 0.05) * p.r * 2;
+      sp[i] = 1.15 - rr[i]; // 内快外慢
+      rm[i] = 1;
+      ringR0[i] = rIn + rr[i] * (rOut - rIn);
+      rpos[i * 3] = Math.cos(a[i]) * ringR0[i];
+      rpos[i * 3 + 1] = yy[i];
+      rpos[i * 3 + 2] = Math.sin(a[i]) * ringR0[i];
+      const c = rc.clone().lerp(new THREE.Color("#ffffff"), Math.random() * 0.25);
+      rcol[i * 3] = c.r; rcol[i * 3 + 1] = c.g; rcol[i * 3 + 2] = c.b;
+    }
+    ringGeo.setAttribute("position", new THREE.BufferAttribute(rpos, 3));
+    ringGeo.setAttribute("color", new THREE.BufferAttribute(rcol, 3));
+    pointsRing = new THREE.Points(ringGeo, new THREE.PointsMaterial({
+      size: Math.max(0.035, p.r * 0.055), vertexColors: true, transparent: true,
+      opacity: isBright ? 0.85 : 0.4, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+    }));
+    pointsRing.rotation.x = Math.PI / 2.35;
+    group.add(pointsRing);
+  }
+  return { group, pointsBody, pointsRing, bodyGeo, ringGeo, a, rr, yy, sp, rm, ringN, ringR0 };
+}
 
 // Three.js 加载：本地 vendor 优先（随仓库部署，离线可用），CDN 兑底
 async function loadTHREEGalaxy() {
@@ -1633,7 +1743,7 @@ async function loadTHREEGalaxy() {
   throw lastErr;
 }
 
-const clampG = (v, a, b) => Math.min(b, Math.max(a, v));
+const clampGalaxy = (v, a, b) => Math.min(b, Math.max(a, v));
 const smooth = (t) => t * t * (3 - 2 * t);
 
 class Galaxy3D {
@@ -1732,7 +1842,7 @@ class Galaxy3D {
       sunPos[i * 3] = rr * Math.sin(ph) * Math.cos(th);
       sunPos[i * 3 + 1] = rr * Math.cos(ph);
       sunPos[i * 3 + 2] = rr * Math.sin(ph) * Math.sin(th);
-      const c = cHot.clone().lerp(cMid, clampG(rr / 1.12, 0, 1)).lerp(cEdge, clampG(Math.max(0, rr - 0.7) / 0.42, 0, 1));
+      const c = cHot.clone().lerp(cMid, clampGalaxy(rr / 1.12, 0, 1)).lerp(cEdge, clampGalaxy(Math.max(0, rr - 0.7) / 0.42, 0, 1));
       sunCol[i * 3] = c.r; sunCol[i * 3 + 1] = c.g; sunCol[i * 3 + 2] = c.b;
     }
     const sunGeo = new THREE.BufferGeometry();
@@ -1755,27 +1865,16 @@ class Galaxy3D {
       this.scene.add(orbit);
     }
 
-    // ---- 七大行星 ----
+    // ---- 七大行星（粒子球壳 + 粒子光环）----
     this.planets = PLANETS.map((p, i) => {
       const ang = i * 2.399963 + 0.7;
-      const group = new THREE.Group();
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(p.r, 28, 20),
-        new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.75, metalness: 0.05 })
-      );
-      group.add(mesh);
-      if (p.ring) {
-        const ring = new THREE.Mesh(
-          new THREE.RingGeometry(p.r * 1.45, p.r * 2.3, 48),
-          new THREE.MeshBasicMaterial({ color: 0xd8bd8a, transparent: true, opacity: 0.4, side: THREE.DoubleSide })
-        );
-        ring.rotation.x = Math.PI / 2.35;
-        group.add(ring);
-      }
+      const made = makeParticlePlanet(p, THREE, LOWEND, CONFIG.galaxy.planetBody);
+      const group = made.group;
+      made.azim = 0; made.polar = 0.5; made.azimT = 0; made.polarT = 0.5; made.spinBoost = 0;
       const px = Math.cos(ang) * p.dist, pz = Math.sin(ang) * p.dist, py = p.y;
       group.position.set(px, py, pz);
       this.scene.add(group);
-      return { ...p, mesh, group, pos: new THREE.Vector3(px, py, pz) };
+      return { ...p, ...made, pos: new THREE.Vector3(px, py, pz) };
     });
 
     this._resize();
@@ -1888,6 +1987,47 @@ class Galaxy3D {
       this.camera.lookAt(this.lookTarget);
     }
 
+    // ---- 行星联动：到达态由手驱动（方位/俯仰/环自旋加速）；全景缓慢自转、选中可抓取 ----
+    const arrivedP = this._arrivedPlanet;
+    for (const pl of this.planets) {
+      if (this.state === "arrived" && arrivedP && pl.name === arrivedP.name) {
+        if (hand && this.vw) {
+          const nx = clampGalaxy(hand.palm.x / this.vw, 0, 1);
+          const ny = clampGalaxy(hand.palm.y / this.vh, 0, 1);
+          pl.azimT = (nx - 0.5) * 2.4;
+          pl.polarT = 0.25 + ny * 0.95;
+          const speed = Math.hypot(hand.vel.x, hand.vel.y);
+          pl.spinBoost += (Math.min(3.2, speed / 380) - pl.spinBoost) * Math.min(1, dt * 3);
+        } else {
+          pl.spinBoost *= Math.pow(0.5, dt);
+        }
+        pl.azim += (pl.azimT - pl.azim) * Math.min(1, dt * 3);
+        pl.polar += (pl.polarT - pl.polar) * Math.min(1, dt * 3);
+        pl.group.rotation.y = pl.azim;
+        pl.group.rotation.x = pl.polar * 0.55;
+        // 环粒子自旋（内快外慢 + 手速加成）
+        if (pl.pointsRing && pl.ringN) {
+          const spin = dt * (0.5 + pl.spinBoost * 1.7);
+          const attr = pl.pointsRing.geometry.attributes.position;
+          const arr = attr.array;
+          for (let i = 0; i < pl.ringN; i++) {
+            pl.a[i] += spin * pl.sp[i];
+            const R0 = pl.ringR0[i];
+            arr[i * 3] = Math.cos(pl.a[i]) * R0;
+            arr[i * 3 + 2] = Math.sin(pl.a[i]) * R0;
+            arr[i * 3 + 1] = pl.yy[i];
+          }
+          attr.needsUpdate = true;
+        }
+      } else {
+        // 全景：缓慢自转；选中的行星稍快并轻微摆动（可被抓取的反馈）
+        const isSel = this.selected === pl.name;
+        pl.group.rotation.y += dt * (isSel ? 0.35 : 0.05);
+        if (isSel && hand) pl.group.rotation.z = Math.sin(this._time * 1.2) * 0.06;
+        else pl.group.rotation.z *= Math.pow(0.5, dt);
+      }
+    }
+
     // ---- 太阳自转（无实体光圈，全粒子构成）----
     this.sun.rotation.y += dt * 0.1;
 
@@ -1920,6 +2060,327 @@ class Galaxy3D {
   }
 }
 
+
+/* ==== js/flower3d.js ==== */
+// ============================================================
+// flower3d.js —— 3D 点云花朵扫描仪（flower 独立页专用）
+// Three.js 点云花（花瓣/茎/叶）+ 几何扫描笼 + 扫描平面横扫；
+// 手势驱动：张手召唤/手腕转=旋转/手远近=缩放/捏合悬停=扫描/握拳重置。
+// 单 rAF 循环；LOWEND 自动减半；dispose() 释放全部 GPU 资源。
+// ============================================================
+
+async function loadTHREEFlower() {
+  let lastErr = null;
+  for (const src of ["../vendor/three.module.js", "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"]) {
+    try { return await import(src); } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error("three 加载失败");
+}
+
+const clampF = (v, a, b) => Math.min(b, Math.max(a, v));
+const smoothF = (t) => t * t * (3 - 2 * t);
+
+class Flower3D {
+  constructor(canvas, opts = {}) {
+    this.canvas = canvas;
+    this.opts = opts; // 由 app.js 传入的共享对象（滑杆实时改这里）
+    if (this.opts.scaleMin === undefined) this.opts.scaleMin = 0.6;
+    if (this.opts.scaleMax === undefined) this.opts.scaleMax = 1.6;
+    if (this.opts.sensitivity === undefined) this.opts.sensitivity = 1;
+    if (this.opts.moveSpeed === undefined) this.opts.moveSpeed = 1;
+    if (this.opts.forceScan === undefined) this.opts.forceScan = false;
+    this.ready = false;
+    this.state = "idle";
+    this.stateText = "AWAITING GESTURE — Open Right Hand to Summon";
+    this.count = 0;
+    this.fade = 0;          // 点云整体淡入 0..1
+    this.reveal = 0;        // 逐层显现进度 0..1
+    this.cage = 0.25;       // 扫描笼展开 0.25..1
+    this.rotY = 0;          // 花的朝向（手腕控制）
+    this.scale = 1;
+    this.scanT = 0;         // 扫描平面相位
+    this.scanning = false;
+    this._g = "None";
+    this._time = 0;
+    this.pos = { x: 0, y: 0 };
+  }
+
+  async init() {
+    if (this.ready) return;
+    const THREE = await loadTHREEFlower();
+    this.THREE = THREE;
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true });
+    this.renderer.setClearColor(0x000000, 0);
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 60);
+    this.camera.position.set(0, 0.35, 4.1);
+    this.camera.lookAt(0, 0, 0);
+    this.scene.add(new THREE.AmbientLight(0x99aacc, 0.7));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.9);
+    dl.position.set(2, 4, 3);
+    this.scene.add(dl);
+
+    // ---- 点云花：花瓣 / 花芯 / 花茎 / 叶 ----
+    const LOW = (navigator.hardwareConcurrency || 4) <= 4;
+    const per = LOW ? 750 : 1500;      // 每片花瓣粒子
+    const total = LOW ? Math.round(11000 / 2) : 11000;
+    const group = new THREE.Group();
+    const pts = [];
+    const cols = [];
+    const reveal = [];                  // 逐层显现顺序（0=最先，1=最后）
+    const push = (x, y, z, r, g, b, rev) => { pts.push(x, y, z); cols.push(r, g, b); reveal.push(rev); };
+
+    // 花瓣：6 片放射状粒子簇（XY 平面朝向相机，外沿卷曲 + 颜色渐隐）
+    const PET = 6;
+    for (let k = 0; k < PET; k++) {
+      const baseA = k * ((Math.PI * 2) / PET) + 0.15;
+      for (let i = 0; i < per; i++) {
+        const t = Math.pow(Math.random(), 0.62);              // 沿花瓣位置 0..1
+        const half = 0.34 * Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.05)), 0.85);
+        const a = baseA + (Math.random() - 0.5) * 2 * half;
+        const R = 0.18 + t * 1.42 * (0.9 + Math.random() * 0.2);
+        const x = Math.cos(a) * R, y = Math.sin(a) * R;
+        const z = -0.28 * t * t + (Math.random() - 0.5) * 0.06; // 花瓣外沿后卷
+        // 颜色：根白粉 → 中浅紫 → 边缘渐隐
+        const hue = 318 - t * 52;
+        const sat = 72 + t * 18;
+        const lig = 80 - t * 26 - (Math.random() - 0.5) * 8;
+        const c = new THREE.Color(`hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${clampF(lig, 40, 88).toFixed(0)}%)`);
+        const rev = 0.05 + t * 0.55 + Math.random() * 0.05;     // 逐层显现顺序
+        push(x, y, z, c.r, c.g, c.b, clampF(rev, 0, 1));
+      }
+    }
+    // 花芯：金色密簇
+    for (let i = 0; i < (LOW ? 260 : 520); i++) {
+      const r = Math.pow(Math.random(), 0.5) * 0.2;
+      const a = Math.random() * Math.PI * 2;
+      const c = new THREE.Color(Math.random() < 0.3 ? "#fff6d8" : "#ffcf5c");
+      push(Math.cos(a) * r, Math.sin(a) * r, 0.06 + Math.random() * 0.08, c.r, c.g, c.b, Math.random() * 0.1);
+    }
+    // 花茎：沿曲线采样的点（绿）
+    const stemN = LOW ? 450 : 900;
+    for (let i = 0; i < stemN; i++) {
+      const t = i / stemN;
+      const x = 0.22 * Math.sin(t * 2.4) + (Math.random() - 0.5) * 0.03;
+      const y = -0.25 - t * 1.75;
+      const z = 0.12 * Math.sin(t * 3.1) + (Math.random() - 0.5) * 0.03;
+      const c = new THREE.Color(`hsl(${(95 + Math.random() * 25).toFixed(0)}, 48%, ${(28 + t * 18).toFixed(0)}%)`);
+      push(x, y, z, c.r, c.g, c.b, 0.7 + t * 0.3);
+    }
+    // 叶：两片椭圆点云
+    for (const [tt, side] of [[0.42, 1], [0.68, -1]]) {
+      const n = LOW ? 175 : 350;
+      const sy = -0.25 - tt * 1.75;
+      for (let i = 0; i < n; i++) {
+        const u = Math.random() * Math.PI * 2;
+        const er = Math.sqrt(Math.random());
+        const lx = Math.cos(u) * 0.52 * er;
+        const lz = Math.sin(u) * 0.16 * er;
+        const ly = sy + side * 0.12 + Math.sin(u) * 0.1 * er;
+        const c = new THREE.Color(`hsl(${(100 + Math.random() * 30).toFixed(0)}, 52%, ${(30 + Math.random() * 16).toFixed(0)}%)`);
+        push(lx + 0.3 * side, ly, lz, c.r, c.g, c.b, 0.75 + Math.random() * 0.2);
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    this.baseCol = new Float32Array(cols);
+    this.revealArr = new Float32Array(reveal);
+    this.count = pts.length / 3;
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pts), 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(cols), 3));
+    this.flowerGeo = geo;
+    this.flowerMat = new THREE.PointsMaterial({
+      size: 0.026, vertexColors: true, transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+    });
+    this.flower = new THREE.Points(geo, this.flowerMat);
+    group.add(this.flower);
+    this.flowerGroup = group;
+    this.scene.add(group);
+
+    // ---- 几何扫描笼：八面体线框 + 方形底环，缓慢自转 ----
+    const cage = new THREE.Group();
+    const oct = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.OctahedronGeometry(1.9, 0)),
+      new THREE.LineBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.22 })
+    );
+    cage.add(oct);
+    const box = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(2.1, 2.1, 2.1)),
+      new THREE.LineBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.13 })
+    );
+    cage.add(box);
+    this.cageGroup = cage;
+    this.scene.add(cage);
+
+    // ---- 扫描平面：半透明青色矩形，沿 Z 往复横扫 ----
+    this.scanPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.3, 2.3),
+      new THREE.MeshBasicMaterial({ color: 0x2dd8ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false })
+    );
+    this.scene.add(this.scanPlane);
+
+    this._resize();
+    this.ready = true;
+  }
+
+  _resize() {
+    const r = this.canvas.parentElement.getBoundingClientRect();
+    if (!r.width || !r.height || !this.renderer) return;
+    this.renderer.setSize(r.width, r.height, false);
+    this.camera.aspect = r.width / r.height;
+    this.camera.updateProjectionMatrix();
+    this.vw = r.width; this.vh = r.height;
+  }
+
+  /** 点云显隐：reveal 控制逐层显现；扫描平面附近临时提亮 */
+  _applyColors(scanning) {
+    const col = this.flowerGeo.attributes.color.array;
+    const pos = this.flowerGeo.attributes.position.array;
+    const planeZ = this.scanPlane.position.z;
+    for (let i = 0; i < this.count; i++) {
+      const rev = this.revealArr[i];
+      let f = this.reveal >= rev ? 1 : 0.06;
+      let boost = 1;
+      if (scanning) {
+        const dz = Math.abs(pos[i * 3 + 2] - planeZ);
+        boost = 1 + 2.4 * Math.max(0, 1 - dz / 0.3);
+      }
+      col[i * 3] = this.baseCol[i * 3] * f * boost;
+      col[i * 3 + 1] = this.baseCol[i * 3 + 1] * f * boost;
+      col[i * 3 + 2] = this.baseCol[i * 3 + 2] * f * boost;
+    }
+    this.flowerGeo.attributes.color.needsUpdate = true;
+  }
+
+  update(dt, hand, gesture) {
+    if (!this.ready) return;
+    this._time += dt;
+    const S = this.opts;
+
+    // ---- 手势状态机 ----
+    if (gesture !== this._g) {
+      if (gesture === "Open_Palm" && (this.state === "idle" || this.state === "resetting")) {
+        this.state = "summoning"; this.reveal = Math.max(this.reveal, 0.02); this.cage = 0.25;
+      }
+      if (gesture === "Closed_Fist" && this.state !== "idle") {
+        this.state = "resetting"; this.scanning = false;
+      }
+      this._g = gesture;
+    }
+    this.scanning = (gesture === "Thumb_Index" || this.opts.forceScan) && (this.state === "active" || this.state === "summoning");
+
+    // ---- 手驱动：旋转 / 缩放 / 平移 ----
+    if (hand && this.vw) {
+      const lm = hand.landmarks;
+      if (lm) {
+        const dx = lm[9].x - lm[0].x, dy = lm[9].y - lm[0].y;
+        const roll = Math.atan2(dx, -dy) * S.sensitivity; // 手腕方向 → 花的朝向
+        this.rotY += (roll - this.rotY) * Math.min(1, dt * 2.6);
+      }
+      const sT = S.scaleMin + clampF((hand.size - 0.12) / 0.3, 0, 1) * (S.scaleMax - S.scaleMin);
+      this.scale += (sT - this.scale) * Math.min(1, dt * 3.5);
+      this.pos.x += ((hand.palm.x / this.vw - 0.5) * 1.5 * S.moveSpeed - this.pos.x) * Math.min(1, dt * 2.5);
+      this.pos.y += (-(hand.palm.y / this.vh - 0.5) * 0.9 * S.moveSpeed - this.pos.y) * Math.min(1, dt * 2.5);
+    }
+
+    // ---- 状态推进 ----
+    if (this.state === "summoning") {
+      this.reveal = Math.min(1, this.reveal + dt * 0.85);
+      this.fade = Math.min(1, this.fade + dt * 1.4);
+      this.cage = 0.25 + smoothF(Math.min(1, this.fade)) * 0.75;
+      if (this.reveal >= 1 && this.fade >= 1) { this.state = "active"; this.stateText = "ACTIVE"; }
+      else this.stateText = "SUMMONING";
+    } else if (this.state === "resetting") {
+      this.reveal = Math.max(0, this.reveal - dt * 1.6);
+      this.fade = Math.max(0, this.fade - dt * 1.8);
+      this.cage = 0.25 + this.fade * 0.75;
+      if (this.fade <= 0.01) { this.state = "idle"; this.stateText = "AWAITING GESTURE — Open Right Hand to Summon"; }
+      else this.stateText = "RESETTING";
+    } else if (this.state === "active") {
+      this.stateText = this.scanning ? "SCANNING" : "ACTIVE";
+    }
+
+    // ---- 应用变换 ----
+    this.flowerGroup.rotation.y = this.rotY + Math.sin(this._time * 0.5) * 0.06;
+    this.flowerGroup.position.set(this.pos.x, this.pos.y, 0);
+    const sc = this.scale * (0.55 + 0.45 * this.fade);
+    this.flowerGroup.scale.setScalar(sc);
+    this.cageGroup.scale.setScalar(this.cage * this.scale);
+    this.cageGroup.rotation.y += dt * 0.35;
+    this.cageGroup.rotation.x = Math.sin(this._time * 0.4) * 0.15;
+    this.scanPlane.position.z = Math.sin(this.scanT) * 1.25;
+    this.scanPlane.rotation.z += dt * 0.6;
+    this.scanPlane.visible = this.scanning || this.state === "summoning";
+    if (this.scanning) this.scanT += dt * 3.2;
+    this._applyColors(this.scanning);
+  }
+
+  render() {
+    if (!this.ready) return;
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  dispose() {
+    this.ready = false;
+    this.scene.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+    });
+    if (this.renderer) this.renderer.dispose();
+  }
+
+  /** 上传点云（XYZ：x y z [r g b]，或 PLY ascii）：替换花点云并居中归一化 */
+  loadPointCloud(text) {
+    const THREE = this.THREE;
+    const pos = [], col = [];
+    const lines = text.split(/\r?\n/);
+    let isPly = false, header = false, vCount = 0, read = 0;
+    for (const raw of lines) {
+      const s = raw.trim();
+      if (!s) continue;
+      if (/^ply/i.test(s)) { isPly = true; continue; }
+      if (isPly && /^format ascii/i.test(s)) { header = true; continue; }
+      if (isPly && /^element vertex (\d+)/i.test(s)) { vCount = parseInt(RegExp.$1); continue; }
+      if (isPly && /^end_header/i.test(s)) { header = true; continue; }
+      if (isPly && !header) continue;
+      const f = s.split(/\s+/).map(Number);
+      if (f.length >= 3 && f.every((v) => !isNaN(v))) {
+        pos.push(f[0], f[1], f[2]);
+        if (f.length >= 6) col.push(f[3] / 255, f[4] / 255, f[5] / 255);
+        else col.push(0.8, 0.85, 1);
+        read++;
+        if (isPly && vCount && read >= vCount) break;
+      }
+    }
+    if (!pos.length) return false;
+    // 居中 + 归一化到 ~2.2
+    let cx = 0, cy = 0, cz = 0;
+    const n = pos.length / 3;
+    for (let i = 0; i < n; i++) { cx += pos[i * 3]; cy += pos[i * 3 + 1]; cz += pos[i * 3 + 2]; }
+    cx /= n; cy /= n; cz /= n;
+    let maxR = 0.001;
+    for (let i = 0; i < n; i++) {
+      pos[i * 3] -= cx; pos[i * 3 + 1] -= cy; pos[i * 3 + 2] -= cz;
+      maxR = Math.max(maxR, Math.hypot(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]));
+    }
+    const s = 2.2 / maxR;
+    for (let i = 0; i < n * 3; i++) pos[i] *= s;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(col), 3));
+    this.flowerGeo.dispose();
+    this.flowerGeo = geo;
+    this.flower.geometry = geo;
+    this.baseCol = new Float32Array(col);
+    this.revealArr = new Float32Array(n); // 上传点云直接全显现
+    this.reveal = 1;
+    this.fade = 1;
+    if (this.state === "idle") { this.state = "active"; this.stateText = "ACTIVE"; }
+    this.count = n;
+    return true;
+  }
+}
 
 /* ==== js/gestures.js ==== */
 // ============================================================
@@ -2252,7 +2713,7 @@ const ps = new ParticleSystem(canvas);
 const modeParam = new URLSearchParams(location.search).get("mode");
 
 // 页面强制模式（flower/ 与 galaxy/ 独立页用）> URL 参数 > 默认银河星旅
-const VALID_MODES = ["ink", "particles", "space3d", "galaxy"];
+const VALID_MODES = ["ink", "particles", "space3d", "galaxy", "flower3d"];
 let renderMode = window.__FORCE_MODE || modeParam || "galaxy";
 if (!VALID_MODES.includes(renderMode)) renderMode = "galaxy";
 let engine = null;
@@ -2513,6 +2974,8 @@ async function enterSpace() {
 
 // ---------- 银河星旅模式 ----------
 let galaxy = null;
+let flower3d = null;
+const flowerOpts = { scaleMin: 0.6, scaleMax: 1.6, sensitivity: 1, moveSpeed: 1, forceScan: false };
 
 function galaxyFrame(f) {
   lastHand = computeHand(f);
@@ -2565,6 +3028,7 @@ async function enterGalaxy() {
       galaxy = new Galaxy3D($("#galaxy"));
       await galaxy.init();
     } catch (e) {
+      console.error("galaxy init failed:", e);
       $("#galaxy").classList.add("hidden");
       setStatus("3D 引擎加载失败", "err");
       showError({
@@ -2587,6 +3051,49 @@ async function enterGalaxy() {
   galaxy._resize();
   if (demo) demo.hold = false; // 引擎就绪，时间轴开走
   galaxyLoop();
+}
+
+// ---------- 3D 点云花朵（flower 独立页）----------
+function flower3dLoop() {
+  if (renderMode !== "flower3d" || !flower3d) return;
+  const now = performance.now();
+  if (loopT && now - loopT < 14) { _raf = requestAnimationFrame(flower3dLoop); return; } // ~60fps 上限
+  const dt = Math.min(0.05, (now - loopT) / 1000);
+  loopT = now;
+  flower3d.update(dt, lastHand, lastGesture);
+  flower3d.render();
+  const stEl = $("#flowerStatus");
+  if (stEl && stEl.textContent !== flower3d.stateText) stEl.textContent = flower3d.stateText;
+  hint?.classList.toggle("hidden", !!lastHand);
+  _raf = requestAnimationFrame(flower3dLoop);
+}
+
+async function enterFlower3d() {
+  $("#space").classList.remove("hidden");
+  $("#galaxy").classList.add("hidden");
+  if (!flower3d) {
+    setStatus("正在加载 3D 引擎…", "loading");
+    try {
+      /* Flower3D 已内联 */
+      flower3d = new Flower3D($("#space"), flowerOpts);
+      await flower3d.init();
+    } catch (e) {
+      $("#space").classList.add("hidden");
+      setStatus("3D 引擎加载失败", "err");
+      showError({
+        title: "3D 花朵需要 WebGL 支持",
+        tips: ["浏览器设置里开启硬件加速后重启浏览器", "或先点「演示模式」体验"],
+      });
+      renderMode = "particles";
+      syncModeButtons(); buildLegend();
+      pad._resize(); ps._resize(); particleLoop();
+      applyModeVisuals();
+      return;
+    }
+  }
+  flower3d._resize();
+  if (demo) demo.hold = false;
+  flower3dLoop();
 }
 
 // ---------- 笔迹模式：每帧入口（原有逻辑） ----------
@@ -2614,7 +3121,7 @@ function inkFrame(f) {
 // ---------- 背景与模式视觉 ----------
 function syncCamBg() {
   const bg = $("#camBg");
-  const on = renderMode === "particles" && mode === "camera" && video.srcObject;
+  const on = (renderMode === "particles" || renderMode === "flower3d") && mode === "camera" && video.srcObject;
   bg.classList.toggle("hidden", !on);
   if (on) bg.srcObject = video.srcObject; // 摄像头画面作粒子/花朵背景（仅本地）
 }
@@ -2679,7 +3186,7 @@ function setRenderMode(m) {
   if (demo && m !== "space3d" && m !== "galaxy") demo.hold = false; // 离开 3D 模式时解除时间轴暂停
   const checkWrap = constrToggle ? constrToggle.closest(".check") : null;
   if (checkWrap) checkWrap.classList.toggle("hidden", m !== "ink");
-  $("#space").classList.toggle("hidden", m !== "space3d");
+  $("#space").classList.toggle("hidden", !(m === "space3d" || m === "flower3d"));
   $("#galaxy").classList.toggle("hidden", m !== "galaxy");
   buildLegend();
   syncModeButtons();
@@ -2687,6 +3194,7 @@ function setRenderMode(m) {
   else if (m === "ink") { pad._resize(); pad.dirty = true; showToast("笔迹模式"); }
   else if (m === "space3d") { enterSpace().then(() => showToast("3D 星环模式")); }
   else if (m === "galaxy") { enterGalaxy().then(() => showToast("银河星旅模式")); }
+  else if (m === "flower3d") { enterFlower3d(); }
   applyModeVisuals();
 }
 
@@ -2730,7 +3238,7 @@ function startDemo() {
   Promise.resolve({ DemoHand }).then(({ DemoHand }) => {
     demo = new DemoHand({ onFrame, onGesture });
     // 3D 模式下等引擎就绪再开始走时间轴（其他模式渲染即就绪）
-    demo.hold = renderMode === "space3d" || renderMode === "galaxy";
+    demo.hold = renderMode === "space3d" || renderMode === "galaxy" || renderMode === "flower3d";
     demo.start();
   }).catch(() => setStatus("演示加载失败", "err"));
 }
@@ -2810,6 +3318,32 @@ const btnDemoEl = $("#btnDemo");
 if (btnDemoEl) btnDemoEl.addEventListener("click", startDemo);
 const btnCamEl = $("#btnCam");
 if (btnCamEl) btnCamEl.addEventListener("click", startCamera);
+
+// 花朵页 3D 点云扫描仪控件（仅独立页存在）
+const optBind = (sel, key) => {
+  const el = $(sel);
+  if (el) el.addEventListener("input", () => { flowerOpts[key] = parseFloat(el.value); });
+};
+optBind("#optMinS", "scaleMin");
+optBind("#optMaxS", "scaleMax");
+optBind("#optSens", "sensitivity");
+optBind("#optMspd", "moveSpeed");
+const btnScanEl = $("#btnScan");
+if (btnScanEl) btnScanEl.addEventListener("click", () => {
+  flowerOpts.forceScan = !flowerOpts.forceScan;
+  btnScanEl.classList.toggle("active", flowerOpts.forceScan);
+});
+const plyEl = $("#plyFile");
+if (plyEl) plyEl.addEventListener("change", () => {
+  const f = plyEl.files && plyEl.files[0];
+  if (!f || !flower3d) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const okLoad = flower3d.loadPointCloud(String(reader.result || ""));
+    showToast(okLoad ? "点云已加载" : "点云解析失败（支持 XYZ / PLY ascii）");
+  };
+  reader.readAsText(f);
+});
 const btnModeGalaxyEl = $("#btnModeGalaxy");
 if (btnModeGalaxyEl) btnModeGalaxyEl.addEventListener("click", () => setRenderMode("galaxy"));
 const btnModeSpaceEl = $("#btnModeSpace");
@@ -2847,8 +3381,10 @@ window.__app = {
   get lastGesture() { return lastGesture; },
   get space() { return space3d; },
   get galaxy() { return galaxy; },
+  get flower3d() { return flower3d; },
   strokes: () => pad.strokes.length,
-  particles: () => (renderMode === "space3d" && space3d ? space3d.count : renderMode === "galaxy" && galaxy ? galaxy.count : ps.count),
+  particles: () => (renderMode === "space3d" && space3d ? space3d.count : renderMode === "galaxy" && galaxy ? galaxy.count : renderMode === "flower3d" && flower3d ? flower3d.count : ps.count),
+  engineStarted: () => !!(engine && engine.started),
   demoT: () => (demo ? demo.t : -1),
   latency: () => (engine ? engine.latencyMs : 0),
   pad,
@@ -2870,6 +3406,8 @@ if (renderMode === "particles") {
   enterSpace();
 } else if (renderMode === "galaxy") {
   enterGalaxy();
+} else if (renderMode === "flower3d") {
+  enterFlower3d();
 }
 applyModeVisuals();
 

@@ -137,6 +137,35 @@ body::after {
 #camBg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .media-src { position: fixed; left: -9999px; top: 0; width: 320px; height: 240px; opacity: 0.01; pointer-events: none; }
 
+/* 花朵页 3D 点云扫描仪 HUD */
+#darkOverlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.72); }
+#flowerStatus {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  font: 600 13px Consolas, "Cascadia Code", monospace; letter-spacing: .18em;
+  color: #2dd8ff; background: rgba(7, 11, 18, .6); border: 1px solid rgba(45, 216, 255, .3);
+  padding: 8px 18px; white-space: nowrap; z-index: 6;
+}
+.hud-panel {
+  position: absolute; z-index: 6; width: 228px; background: rgba(7, 11, 18, .78);
+  border: 1px solid rgba(45, 216, 255, .3); padding: 12px 14px;
+  font-family: Consolas, "Cascadia Code", monospace; color: #d7e6f5;
+}
+.hud-left { left: 16px; top: 50%; transform: translateY(-50%); }
+.hud-right { right: 16px; top: 50%; transform: translateY(-50%); }
+.hud-title { font-size: 11px; letter-spacing: .16em; color: #2dd8ff; border-bottom: 1px solid rgba(45, 216, 255, .25); padding-bottom: 7px; margin-bottom: 9px; }
+.hud-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11.5px; padding: 4px 0; color: #a7b8c9; }
+.hud-row input[type="range"] { width: 110px; accent-color: #2dd8ff; }
+.hud-row span { color: #6b7f94; text-align: right; }
+.hud-btns { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+.hud-btn {
+  font: 11px Consolas, monospace; letter-spacing: .1em; color: #d7e6f5; text-align: center;
+  background: rgba(45, 216, 255, .08); border: 1px solid rgba(45, 216, 255, .35);
+  padding: 7px 10px; cursor: pointer; user-select: none;
+}
+.hud-btn:hover { color: #2dd8ff; box-shadow: 0 0 12px rgba(45, 216, 255, .25); }
+.hud-btn.active { color: #0b111c; background: #2dd8ff; }
+.media-src { position: fixed; left: -9999px; top: 0; width: 320px; height: 240px; opacity: 0.01; pointer-events: none; }
+
 /* 独立单体验页（/flower/ /galaxy/）：全屏沉浸，隐藏侧栏与模式切换 */
 body.single .mode-row { display: none; }
 body.single .topbar { position: fixed; top: 12px; left: 16px; right: 16px; padding: 0; background: transparent; border-bottom: none; z-index: 6; }

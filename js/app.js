@@ -47,7 +47,7 @@ const ps = new ParticleSystem(canvas);
 const modeParam = new URLSearchParams(location.search).get("mode");
 
 // 页面强制模式（flower/ 与 galaxy/ 独立页用）> URL 参数 > 默认银河星旅
-const VALID_MODES = ["ink", "particles", "space3d", "galaxy"];
+const VALID_MODES = ["ink", "particles", "space3d", "galaxy", "flower3d"];
 let renderMode = window.__FORCE_MODE || modeParam || "galaxy";
 if (!VALID_MODES.includes(renderMode)) renderMode = "galaxy";
 let engine = null;
@@ -308,6 +308,8 @@ async function enterSpace() {
 
 // ---------- 银河星旅模式 ----------
 let galaxy = null;
+let flower3d = null;
+const flowerOpts = { scaleMin: 0.6, scaleMax: 1.6, sensitivity: 1, moveSpeed: 1, forceScan: false };
 
 function galaxyFrame(f) {
   lastHand = computeHand(f);
@@ -360,6 +362,7 @@ async function enterGalaxy() {
       galaxy = new Galaxy3D($("#galaxy"));
       await galaxy.init();
     } catch (e) {
+      console.error("galaxy init failed:", e);
       $("#galaxy").classList.add("hidden");
       setStatus("3D 引擎加载失败", "err");
       showError({
@@ -382,6 +385,49 @@ async function enterGalaxy() {
   galaxy._resize();
   if (demo) demo.hold = false; // 引擎就绪，时间轴开走
   galaxyLoop();
+}
+
+// ---------- 3D 点云花朵（flower 独立页）----------
+function flower3dLoop() {
+  if (renderMode !== "flower3d" || !flower3d) return;
+  const now = performance.now();
+  if (loopT && now - loopT < 14) { _raf = requestAnimationFrame(flower3dLoop); return; } // ~60fps 上限
+  const dt = Math.min(0.05, (now - loopT) / 1000);
+  loopT = now;
+  flower3d.update(dt, lastHand, lastGesture);
+  flower3d.render();
+  const stEl = $("#flowerStatus");
+  if (stEl && stEl.textContent !== flower3d.stateText) stEl.textContent = flower3d.stateText;
+  hint?.classList.toggle("hidden", !!lastHand);
+  _raf = requestAnimationFrame(flower3dLoop);
+}
+
+async function enterFlower3d() {
+  $("#space").classList.remove("hidden");
+  $("#galaxy").classList.add("hidden");
+  if (!flower3d) {
+    setStatus("正在加载 3D 引擎…", "loading");
+    try {
+      const { Flower3D } = await import("./flower3d.js");
+      flower3d = new Flower3D($("#space"), flowerOpts);
+      await flower3d.init();
+    } catch (e) {
+      $("#space").classList.add("hidden");
+      setStatus("3D 引擎加载失败", "err");
+      showError({
+        title: "3D 花朵需要 WebGL 支持",
+        tips: ["浏览器设置里开启硬件加速后重启浏览器", "或先点「演示模式」体验"],
+      });
+      renderMode = "particles";
+      syncModeButtons(); buildLegend();
+      pad._resize(); ps._resize(); particleLoop();
+      applyModeVisuals();
+      return;
+    }
+  }
+  flower3d._resize();
+  if (demo) demo.hold = false;
+  flower3dLoop();
 }
 
 // ---------- 笔迹模式：每帧入口（原有逻辑） ----------
@@ -409,7 +455,7 @@ function inkFrame(f) {
 // ---------- 背景与模式视觉 ----------
 function syncCamBg() {
   const bg = $("#camBg");
-  const on = renderMode === "particles" && mode === "camera" && video.srcObject;
+  const on = (renderMode === "particles" || renderMode === "flower3d") && mode === "camera" && video.srcObject;
   bg.classList.toggle("hidden", !on);
   if (on) bg.srcObject = video.srcObject; // 摄像头画面作粒子/花朵背景（仅本地）
 }
@@ -474,7 +520,7 @@ function setRenderMode(m) {
   if (demo && m !== "space3d" && m !== "galaxy") demo.hold = false; // 离开 3D 模式时解除时间轴暂停
   const checkWrap = constrToggle ? constrToggle.closest(".check") : null;
   if (checkWrap) checkWrap.classList.toggle("hidden", m !== "ink");
-  $("#space").classList.toggle("hidden", m !== "space3d");
+  $("#space").classList.toggle("hidden", !(m === "space3d" || m === "flower3d"));
   $("#galaxy").classList.toggle("hidden", m !== "galaxy");
   buildLegend();
   syncModeButtons();
@@ -482,6 +528,7 @@ function setRenderMode(m) {
   else if (m === "ink") { pad._resize(); pad.dirty = true; showToast("笔迹模式"); }
   else if (m === "space3d") { enterSpace().then(() => showToast("3D 星环模式")); }
   else if (m === "galaxy") { enterGalaxy().then(() => showToast("银河星旅模式")); }
+  else if (m === "flower3d") { enterFlower3d(); }
   applyModeVisuals();
 }
 
@@ -525,7 +572,7 @@ function startDemo() {
   import("./demo.js").then(({ DemoHand }) => {
     demo = new DemoHand({ onFrame, onGesture });
     // 3D 模式下等引擎就绪再开始走时间轴（其他模式渲染即就绪）
-    demo.hold = renderMode === "space3d" || renderMode === "galaxy";
+    demo.hold = renderMode === "space3d" || renderMode === "galaxy" || renderMode === "flower3d";
     demo.start();
   }).catch(() => setStatus("演示加载失败", "err"));
 }
@@ -605,6 +652,32 @@ const btnDemoEl = $("#btnDemo");
 if (btnDemoEl) btnDemoEl.addEventListener("click", startDemo);
 const btnCamEl = $("#btnCam");
 if (btnCamEl) btnCamEl.addEventListener("click", startCamera);
+
+// 花朵页 3D 点云扫描仪控件（仅独立页存在）
+const optBind = (sel, key) => {
+  const el = $(sel);
+  if (el) el.addEventListener("input", () => { flowerOpts[key] = parseFloat(el.value); });
+};
+optBind("#optMinS", "scaleMin");
+optBind("#optMaxS", "scaleMax");
+optBind("#optSens", "sensitivity");
+optBind("#optMspd", "moveSpeed");
+const btnScanEl = $("#btnScan");
+if (btnScanEl) btnScanEl.addEventListener("click", () => {
+  flowerOpts.forceScan = !flowerOpts.forceScan;
+  btnScanEl.classList.toggle("active", flowerOpts.forceScan);
+});
+const plyEl = $("#plyFile");
+if (plyEl) plyEl.addEventListener("change", () => {
+  const f = plyEl.files && plyEl.files[0];
+  if (!f || !flower3d) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const okLoad = flower3d.loadPointCloud(String(reader.result || ""));
+    showToast(okLoad ? "点云已加载" : "点云解析失败（支持 XYZ / PLY ascii）");
+  };
+  reader.readAsText(f);
+});
 const btnModeGalaxyEl = $("#btnModeGalaxy");
 if (btnModeGalaxyEl) btnModeGalaxyEl.addEventListener("click", () => setRenderMode("galaxy"));
 const btnModeSpaceEl = $("#btnModeSpace");
@@ -642,8 +715,10 @@ window.__app = {
   get lastGesture() { return lastGesture; },
   get space() { return space3d; },
   get galaxy() { return galaxy; },
+  get flower3d() { return flower3d; },
   strokes: () => pad.strokes.length,
-  particles: () => (renderMode === "space3d" && space3d ? space3d.count : renderMode === "galaxy" && galaxy ? galaxy.count : ps.count),
+  particles: () => (renderMode === "space3d" && space3d ? space3d.count : renderMode === "galaxy" && galaxy ? galaxy.count : renderMode === "flower3d" && flower3d ? flower3d.count : ps.count),
+  engineStarted: () => !!(engine && engine.started),
   demoT: () => (demo ? demo.t : -1),
   latency: () => (engine ? engine.latencyMs : 0),
   pad,
@@ -665,6 +740,8 @@ if (renderMode === "particles") {
   enterSpace();
 } else if (renderMode === "galaxy") {
   enterGalaxy();
+} else if (renderMode === "flower3d") {
+  enterFlower3d();
 }
 applyModeVisuals();
 

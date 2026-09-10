@@ -21,6 +21,7 @@ const modules = [
   "js/demo.js",
   "js/space3d.js",
   "js/galaxy.js",
+  "js/flower3d.js",
   "js/gestures.js",
   "js/app.js",
 ];
@@ -35,9 +36,10 @@ js = js.replace(/^export\s+(?=(const|class|function|let|var))/gm, "");
 js = js.replace(/import\("\.\/demo\.js"\)\.then\(\(\{ DemoHand \}\) => \{/, "Promise.resolve({ DemoHand }).then(({ DemoHand }) => {");
 js = js.replace(/const \{ Space3D \} = await import\("\.\/space3d\.js"\);/, "/* Space3D 已内联 */");
 js = js.replace(/const \{ Galaxy3D \} = await import\("\.\/galaxy\.js"\);/, "/* Galaxy3D 已内联 */");
+js = js.replace(/const \{ Flower3D \} = await import\("\.\/flower3d\.js"\);/, "/* Flower3D 已内联 */");
 
 // 自检：space3d 的 loadTHREE 定义+调用应保留（2 处），不得出现重复定义
-const bare = (js.match(/loadTHREE(?!Galaxy)/g) || []).length;
+const bare = (js.match(/loadTHREE(?!Galaxy|Flower)/g) || []).length;
 if (bare !== 2) throw new Error(`standalone 构建自检失败：裸 loadTHREE 应为 2，实际 ${bare}`);
 
 const css = read("css/style.css");

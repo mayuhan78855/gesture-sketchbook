@@ -140,6 +140,8 @@ try {
     // 等待跃迁完成（不用固定时长，避免无头浏览器 rAF 节流导致的时序漂移）
     await page.waitForFunction(() => window.__app.galaxy.state === "arrived", { timeout: 15000 });
     ok("捏合跃迁：抵达行星", true);
+    const ringOk = await page.evaluate(() => !!(window.__app.galaxy.planets && window.__app.galaxy.planets[4] && window.__app.galaxy.planets[4].pointsRing));
+    ok("土星粒子光环已就位", ringOk);
     await page.screenshot({ path: path.join(root, "assets/screenshots/demo-galaxy-arrive.png") });
     await page.waitForFunction(() => window.__app.lastGesture === "None", { timeout: 15000 });
     await page.waitForFunction(() => window.__app.galaxy.state === "overview", { timeout: 15000 });
@@ -152,7 +154,7 @@ try {
   // ---- 2e. 独立页面：/flower/ 与 /galaxy/ 强制模式生效 ----
   console.log("\n[2e] 独立页面 (/flower/ /galaxy/)");
   {
-    for (const [sub, expectMode] of [["flower/", "particles"], ["galaxy/", "galaxy"]]) {
+    for (const [sub, expectMode] of [["flower/", "flower3d"], ["galaxy/", "galaxy"]]) {
       const page = await browser.newPage({ viewport: { width: 900, height: 572 } });
       track(page);
       await page.goto(`${BASE}/${sub}?demo=1`);

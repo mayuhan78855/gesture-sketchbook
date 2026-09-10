@@ -16,11 +16,91 @@ const PLANETS = [
   { name: "水星", en: "MERCURY", color: 0x9c8f84, r: 0.30, dist: 6.5,  y: 0.8,  blurb: "离太阳最近的疾行者" },
   { name: "金星", en: "VENUS",   color: 0xe8ddc0, r: 0.46, dist: 8.4,  y: -0.6, blurb: "黎明与黄昏之星" },
   { name: "火星", en: "MARS",    color: 0xc25538, r: 0.38, dist: 10.0, y: 1.4,  blurb: "红色荒漠世界" },
-  { name: "木星", en: "JUPITER", color: 0xd8a565, r: 0.92, dist: 12.2, y: -1.2, blurb: "气态巨行星之王" },
-  { name: "土星", en: "SATURN",  color: 0xe8cf96, r: 0.78, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: true },
-  { name: "天王星", en: "URANUS", color: 0x7fd4d9, r: 0.55, dist: 16.0, y: -1.6, blurb: "躺着自转的冰巨星" },
-  { name: "海王星", en: "NEPTUNE", color: 0x4f7fe0, r: 0.52, dist: 17.6, y: 1.1,  blurb: "风暴与深蓝" },
+  { name: "木星", en: "JUPITER", color: 0xd8a565, r: 0.92, dist: 12.2, y: -1.2, blurb: "气态巨行星之王", ring: "faint" },
+  { name: "土星", en: "SATURN",  color: 0xe8cf96, r: 0.78, dist: 14.4, y: 0.6,  blurb: "戴环的巨人", ring: "bright" },
+  { name: "天王星", en: "URANUS", color: 0x7fd4d9, r: 0.55, dist: 16.0, y: -1.6, blurb: "躺着自转的冰巨星", ring: "faint" },
+  { name: "海王星", en: "NEPTUNE", color: 0x4f7fe0, r: 0.52, dist: 17.6, y: 1.1,  blurb: "风暴与深蓝", ring: "faint" },
 ];
+
+/**
+ * makeParticlePlanet —— 粒子行星工厂
+ * 球壳：斐波那契球均匀布点（顶点色按纬度渐变）+ 暗色 core 撑体积；
+ * 光环：复用 space3d 的环采样数学（rr 内密外疏 / yy 厚度 / sp 内快外慢），倾角固定；
+ * 环粒子位置每帧由 update() 推进（到达态由手驱动加速）。
+ */
+function makeParticlePlanet(p, THREE, LOWEND, bodyNBase) {
+  const group = new THREE.Group();
+  const base = new THREE.Color(p.color);
+  const bright = base.clone().lerp(new THREE.Color("#ffffff"), 0.4);
+  const dark = base.clone().lerp(new THREE.Color("#000000"), 0.3);
+
+  // ---- 球壳 ----
+  const bodyN = LOWEND ? Math.round(bodyNBase * 0.53) : bodyNBase;
+  const bodyGeo = new THREE.BufferGeometry();
+  const bpos = new Float32Array(bodyN * 3);
+  const bcol = new Float32Array(bodyN * 3);
+  for (let i = 0; i < bodyN; i++) {
+    const y = 1 - (2 * (i + 0.5)) / bodyN;
+    const rad = Math.sqrt(Math.max(0, 1 - y * y));
+    const phi = i * 2.399963;
+    const c = dark.clone().lerp(bright, clampGalaxy((y + 1) / 2 + (Math.random() - 0.5) * 0.2, 0, 1));
+    bpos[i * 3] = Math.cos(phi) * rad * p.r;
+    bpos[i * 3 + 1] = y * p.r;
+    bpos[i * 3 + 2] = Math.sin(phi) * rad * p.r;
+    bcol[i * 3] = Math.min(1, c.r); bcol[i * 3 + 1] = Math.min(1, c.g); bcol[i * 3 + 2] = Math.min(1, c.b);
+  }
+  bodyGeo.setAttribute("position", new THREE.BufferAttribute(bpos, 3));
+  bodyGeo.setAttribute("color", new THREE.BufferAttribute(bcol, 3));
+  const pointsBody = new THREE.Points(bodyGeo, new THREE.PointsMaterial({
+    size: Math.max(0.03, p.r * 0.07), vertexColors: true, transparent: true, opacity: 0.95,
+    blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+  }));
+  group.add(pointsBody);
+
+  // 暗色 core：撑出体积感，避免纯粒子显得空
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(p.r * 0.92, 24, 18),
+    new THREE.MeshBasicMaterial({ color: base.clone().multiplyScalar(0.3) })
+  );
+  group.add(core);
+
+  // ---- 光环（土星亮环；木星/天王星/海王星淡环）----
+  let pointsRing = null, ringGeo = null;
+  let a = null, rr = null, yy = null, sp = null, rm = null, ringN = 0, ringR0 = null;
+  if (p.ring) {
+    const isBright = p.ring === "bright";
+    ringN = isBright ? (LOWEND ? 1200 : 2500) : (LOWEND ? 600 : 1200);
+    a = new Float32Array(ringN); rr = new Float32Array(ringN); yy = new Float32Array(ringN);
+    sp = new Float32Array(ringN); rm = new Float32Array(ringN); ringR0 = new Float32Array(ringN);
+    ringGeo = new THREE.BufferGeometry();
+    const rpos = new Float32Array(ringN * 3);
+    const rcol = new Float32Array(ringN * 3);
+    const rIn = p.r * 1.4, rOut = p.r * (isBright ? 2.4 : 2.0);
+    const rc = base.clone().lerp(new THREE.Color("#ffffff"), 0.3);
+    for (let i = 0; i < ringN; i++) {
+      rr[i] = Math.pow(Math.random(), 0.6); // 内密外疏
+      a[i] = Math.random() * Math.PI * 2;
+      yy[i] = (Math.random() - 0.5) * (0.05 + rr[i] * 0.05) * p.r * 2;
+      sp[i] = 1.15 - rr[i]; // 内快外慢
+      rm[i] = 1;
+      ringR0[i] = rIn + rr[i] * (rOut - rIn);
+      rpos[i * 3] = Math.cos(a[i]) * ringR0[i];
+      rpos[i * 3 + 1] = yy[i];
+      rpos[i * 3 + 2] = Math.sin(a[i]) * ringR0[i];
+      const c = rc.clone().lerp(new THREE.Color("#ffffff"), Math.random() * 0.25);
+      rcol[i * 3] = c.r; rcol[i * 3 + 1] = c.g; rcol[i * 3 + 2] = c.b;
+    }
+    ringGeo.setAttribute("position", new THREE.BufferAttribute(rpos, 3));
+    ringGeo.setAttribute("color", new THREE.BufferAttribute(rcol, 3));
+    pointsRing = new THREE.Points(ringGeo, new THREE.PointsMaterial({
+      size: Math.max(0.035, p.r * 0.055), vertexColors: true, transparent: true,
+      opacity: isBright ? 0.85 : 0.4, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+    }));
+    pointsRing.rotation.x = Math.PI / 2.35;
+    group.add(pointsRing);
+  }
+  return { group, pointsBody, pointsRing, bodyGeo, ringGeo, a, rr, yy, sp, rm, ringN, ringR0 };
+}
 
 // Three.js 加载：本地 vendor 优先（随仓库部署，离线可用），CDN 兑底
 async function loadTHREEGalaxy() {
@@ -31,7 +111,7 @@ async function loadTHREEGalaxy() {
   throw lastErr;
 }
 
-const clampG = (v, a, b) => Math.min(b, Math.max(a, v));
+const clampGalaxy = (v, a, b) => Math.min(b, Math.max(a, v));
 const smooth = (t) => t * t * (3 - 2 * t);
 
 export class Galaxy3D {
@@ -130,7 +210,7 @@ export class Galaxy3D {
       sunPos[i * 3] = rr * Math.sin(ph) * Math.cos(th);
       sunPos[i * 3 + 1] = rr * Math.cos(ph);
       sunPos[i * 3 + 2] = rr * Math.sin(ph) * Math.sin(th);
-      const c = cHot.clone().lerp(cMid, clampG(rr / 1.12, 0, 1)).lerp(cEdge, clampG(Math.max(0, rr - 0.7) / 0.42, 0, 1));
+      const c = cHot.clone().lerp(cMid, clampGalaxy(rr / 1.12, 0, 1)).lerp(cEdge, clampGalaxy(Math.max(0, rr - 0.7) / 0.42, 0, 1));
       sunCol[i * 3] = c.r; sunCol[i * 3 + 1] = c.g; sunCol[i * 3 + 2] = c.b;
     }
     const sunGeo = new THREE.BufferGeometry();
@@ -153,27 +233,16 @@ export class Galaxy3D {
       this.scene.add(orbit);
     }
 
-    // ---- 七大行星 ----
+    // ---- 七大行星（粒子球壳 + 粒子光环）----
     this.planets = PLANETS.map((p, i) => {
       const ang = i * 2.399963 + 0.7;
-      const group = new THREE.Group();
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(p.r, 28, 20),
-        new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.75, metalness: 0.05 })
-      );
-      group.add(mesh);
-      if (p.ring) {
-        const ring = new THREE.Mesh(
-          new THREE.RingGeometry(p.r * 1.45, p.r * 2.3, 48),
-          new THREE.MeshBasicMaterial({ color: 0xd8bd8a, transparent: true, opacity: 0.4, side: THREE.DoubleSide })
-        );
-        ring.rotation.x = Math.PI / 2.35;
-        group.add(ring);
-      }
+      const made = makeParticlePlanet(p, THREE, LOWEND, CONFIG.galaxy.planetBody);
+      const group = made.group;
+      made.azim = 0; made.polar = 0.5; made.azimT = 0; made.polarT = 0.5; made.spinBoost = 0;
       const px = Math.cos(ang) * p.dist, pz = Math.sin(ang) * p.dist, py = p.y;
       group.position.set(px, py, pz);
       this.scene.add(group);
-      return { ...p, mesh, group, pos: new THREE.Vector3(px, py, pz) };
+      return { ...p, ...made, pos: new THREE.Vector3(px, py, pz) };
     });
 
     this._resize();
@@ -284,6 +353,47 @@ export class Galaxy3D {
       this.camera.position.set(Math.sin(azim) * radius, height, Math.cos(azim) * radius);
       this.lookTarget.lerp(this._zero, Math.min(1, dt * 3));
       this.camera.lookAt(this.lookTarget);
+    }
+
+    // ---- 行星联动：到达态由手驱动（方位/俯仰/环自旋加速）；全景缓慢自转、选中可抓取 ----
+    const arrivedP = this._arrivedPlanet;
+    for (const pl of this.planets) {
+      if (this.state === "arrived" && arrivedP && pl.name === arrivedP.name) {
+        if (hand && this.vw) {
+          const nx = clampGalaxy(hand.palm.x / this.vw, 0, 1);
+          const ny = clampGalaxy(hand.palm.y / this.vh, 0, 1);
+          pl.azimT = (nx - 0.5) * 2.4;
+          pl.polarT = 0.25 + ny * 0.95;
+          const speed = Math.hypot(hand.vel.x, hand.vel.y);
+          pl.spinBoost += (Math.min(3.2, speed / 380) - pl.spinBoost) * Math.min(1, dt * 3);
+        } else {
+          pl.spinBoost *= Math.pow(0.5, dt);
+        }
+        pl.azim += (pl.azimT - pl.azim) * Math.min(1, dt * 3);
+        pl.polar += (pl.polarT - pl.polar) * Math.min(1, dt * 3);
+        pl.group.rotation.y = pl.azim;
+        pl.group.rotation.x = pl.polar * 0.55;
+        // 环粒子自旋（内快外慢 + 手速加成）
+        if (pl.pointsRing && pl.ringN) {
+          const spin = dt * (0.5 + pl.spinBoost * 1.7);
+          const attr = pl.pointsRing.geometry.attributes.position;
+          const arr = attr.array;
+          for (let i = 0; i < pl.ringN; i++) {
+            pl.a[i] += spin * pl.sp[i];
+            const R0 = pl.ringR0[i];
+            arr[i * 3] = Math.cos(pl.a[i]) * R0;
+            arr[i * 3 + 2] = Math.sin(pl.a[i]) * R0;
+            arr[i * 3 + 1] = pl.yy[i];
+          }
+          attr.needsUpdate = true;
+        }
+      } else {
+        // 全景：缓慢自转；选中的行星稍快并轻微摆动（可被抓取的反馈）
+        const isSel = this.selected === pl.name;
+        pl.group.rotation.y += dt * (isSel ? 0.35 : 0.05);
+        if (isSel && hand) pl.group.rotation.z = Math.sin(this._time * 1.2) * 0.06;
+        else pl.group.rotation.z *= Math.pow(0.5, dt);
+      }
     }
 
     // ---- 太阳自转（无实体光圈，全粒子构成）----
