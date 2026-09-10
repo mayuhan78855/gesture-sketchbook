@@ -273,7 +273,6 @@ export class Galaxy3D {
       this.scene.add(group);
       return { ...p, ...made, pos: new THREE.Vector3(px, py, pz) };
     });
-    });
 
     this._resize();
     this.camera.position.set(0, 7.5, 14.5);
